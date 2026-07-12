@@ -54,6 +54,50 @@
   --font-mono:    'JetBrains Mono', monospace;
 }
 
+/* Light Theme Overrides */
+[data-theme="light"] {
+  /* Backgrounds */
+  --bg-base:       #F9FAFB;
+  --bg-surface:    #FFFFFF;
+  --bg-surface-2:  #F3F4F6;
+
+  /* Borders */
+  --border:        #E5E7EB;
+
+  /* Text */
+  --text-primary:   #111827;
+  --text-secondary: #4B5563;
+  --text-muted:     #9CA3AF;
+
+  /* Accent */
+  --accent:     #2563EB;
+  --accent-dim: #93C5FD;
+
+  /* Status */
+  --status-available: #10B981;
+  --status-ontrip:    #3B82F6;
+  --status-shop:      #F59E0B;
+  --status-retired:   #6B7280;
+  --status-danger:    #EF4444;
+
+  /* Layout */
+  --sidebar-width: 240px;
+  --topbar-height: 64px;
+
+  /* Motion */
+  --ease:     cubic-bezier(0.4, 0, 0.2, 1);
+  --duration: 150ms;
+
+  /* Radius */
+  --radius:      2px;
+  --radius-pill: 999px;
+
+  /* Typography */
+  --font-display: 'Space Grotesk', sans-serif;
+  --font-body:    'Inter', sans-serif;
+  --font-mono:    'JetBrains Mono', monospace;
+}
+
 /* ── Base ── */
 html, body {
   height: 100%;
@@ -1752,4 +1796,58 @@ input[type="number"] {
   .dm-filter-row { grid-template-columns: repeat(2, 1fr); gap: 8px; }
   .dm-filter-count { font-size: 24px; }
   .dm-grid { grid-template-columns: 1fr; }
+}
+
+/* ═══════════════════════════════════════════════
+   THEME SWITCH
+   ═══════════════════════════════════════════════ */
+
+.theme-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+}
+.theme-switch-track {
+  width: 44px;
+  height: 24px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-surface-2);
+  border: 1px solid var(--border);
+  position: relative;
+  transition: background var(--duration) var(--ease);
+}
+.theme-switch-knob {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--text-primary);
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  transition: transform var(--duration) var(--ease), background var(--duration) var(--ease);
+}
+[data-theme="light"] .theme-switch-knob {
+  transform: translateX(20px);
+  background: var(--accent);
+}
+[data-theme="light"] .theme-switch-track {
+  background: #E5E7EB;
+}
+.theme-icon-moon, .theme-icon-sun {
+  font-size: 14px;
+  color: var(--text-secondary);
+  opacity: 0.5;
+  transition: opacity var(--duration) var(--ease);
+}
+/* In Dark Mode (default), moon is active */
+:root:not([data-theme="light"]) .theme-icon-moon {
+  opacity: 1;
+}
+/* In Light Mode, sun is active */
+[data-theme="light"] .theme-icon-sun {
+  opacity: 1;
 }

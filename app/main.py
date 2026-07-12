@@ -1,15 +1,14 @@
 import os
-from datetime import datetime, date
-from typing import List, Optional
-from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File, Request
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from sqlalchemy.orm import Session
-import jwt
-import re
 import io
 import json
-import os
+from datetime import date, timedelta
+from typing import List, Optional
+from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import OAuth2PasswordBearer
+from fastapi.staticfiles import StaticFiles
+from sqlalchemy.orm import Session
+import jwt
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -226,7 +225,7 @@ def require_role(allowed_roles: List[str]):
         return current_user
     return role_checker
 
-from fastapi.responses import FileResponse
+
 
 
 # --- Authentication ---
@@ -749,9 +748,20 @@ def update_alert_status(alert_id: int, status_update: AlertStatusUpdate, db: Ses
     db.refresh(db_alert)
     return db_alert
 
-
-from fastapi.staticfiles import StaticFiles
+@app.post("/reminders/send", tags=["Drivers"])
+def send_license_reminders(db: Session = Depends(get_db), current_user: User = Depends(require_role(['Fleet Manager', 'Safety Officer']))):
+    warning_date = (date.today() + timedelta(days=30)).isoformat()
+    expired_date = date.today().isoformat()
+    
+    drivers = db.query(Driver).all()
+    emails_sent = 0
+    for d in drivers:
+        if d.licenseExpiry < expired_date:
+            print(f"MOCK EMAIL: Urgent! {d.name}'s license expired on {d.licenseExpiry}!")
+            emails_sent += 1
+        elif d.licenseExpiry <= warning_date:
+            print(f"MOCK EMAIL: Reminder: {d.name}'s license will expire soon on {d.licenseExpiry}!")
+            emails_sent += 1
+            
+    return {"message": f"Sent {emails_sent} email reminders."}
 app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
-
-
-

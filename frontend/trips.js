@@ -409,21 +409,103 @@
     });
   }
 
+  // --- Modals ---
+  function openAddModal() {
+    const vehicles = DataLayer.getVehicles().filter(v => v.status === 'Available');
+    const drivers = DataLayer.getDrivers().filter(d => d.status === 'Available');
+    
+    const vOptions = vehicles.map(v => `<option value="${v.id}">${v.regNumber} (${v.maxLoadKg} kg)</option>`).join('');
+    const dOptions = drivers.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
+
+    const html = `
+      <div class="modal-overlay" id="trip-modal-overlay">
+        <div class="modal" style="max-width: 500px;">
+          <div class="modal-header">
+            <h2 class="modal-title">Schedule New Trip</h2>
+            <button class="modal-close" id="trip-modal-close">&times;</button>
+          </div>
+          <div class="modal-body">
+            <form id="trip-form">
+              <div class="form-grid">
+                <div class="form-group">
+                  <label class="form-label">Source</label>
+                  <input type="text" class="form-input" id="trip-source" required>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Destination</label>
+                  <input type="text" class="form-input" id="trip-dest" required>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Vehicle (Available)</label>
+                  <select class="form-input" id="trip-vehicle" required>
+                    <option value="">Select Vehicle...</option>
+                    ${vOptions}
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Driver (Available)</label>
+                  <select class="form-input" id="trip-driver" required>
+                    <option value="">Select Driver...</option>
+                    ${dOptions}
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Cargo Weight (kg)</label>
+                  <input type="number" step="0.1" class="form-input" id="trip-weight" required>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Planned Distance (km)</label>
+                  <input type="number" step="0.1" class="form-input" id="trip-dist" required>
+                </div>
+              </div>
+              <div class="modal-footer" style="margin-top: 24px; justify-content: flex-end; padding: 0; border: none;">
+                <button type="button" class="btn btn--ghost" id="trip-cancel">Cancel</button>
+                <button type="submit" class="btn btn--accent">Create Trip</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', html);
+
+    const overlay = document.getElementById('trip-modal-overlay');
+    const closeBtn = document.getElementById('trip-modal-close');
+    const cancelBtn = document.getElementById('trip-cancel');
+    const form = document.getElementById('trip-form');
+
+    const close = () => overlay.remove();
+    closeBtn.onclick = close;
+    cancelBtn.onclick = close;
+
+    form.onsubmit = async (e) => {
+      e.preventDefault();
+      try {
+        const payload = {
+          source: document.getElementById('trip-source').value,
+          destination: document.getElementById('trip-dest').value,
+          vehicleId: parseInt(document.getElementById('trip-vehicle').value),
+          driverId: parseInt(document.getElementById('trip-driver').value),
+          cargoWeightKg: parseFloat(document.getElementById('trip-weight').value),
+          plannedDistanceKm: parseFloat(document.getElementById('trip-dist').value)
+        };
+        await DataLayer.createTrip(payload);
+        close();
+        refreshContent();
+      } catch (err) {
+        alert(err.message || 'Failed to create trip');
+      }
+    };
+  }
+
   // --- Page Renderer ---
   function renderTripsPage() {
-    const role = DataLayer.getCurrentRole();
-    const canCreate = (role === 'Fleet Manager' || role === 'Safety Officer');
-
     return `
       <div class="page-toolbar">
         <div class="page-toolbar-left"></div>
         <div style="display: flex; gap: 12px;">
           <button class="btn btn--ghost" id="btn-report-trips">Generate Report</button>
-          ${canCreate ? `
-            <button class="btn btn--accent" id="btn-add-trip">
-              <span class="btn-icon">+</span> Schedule Trip
-            </button>
-          ` : ''}
         </div>
 
       </div>
@@ -442,14 +524,6 @@
   TransitOps.registerPage('trips', () => {
     setTimeout(() => {
       bindEvents();
-
-
-            const role = DataLayer.getCurrentRole();
-      const canCreate = (role === 'Fleet Manager' || role === 'Safety Officer');
-      if (canCreate) {
-        const addBtn = document.getElementById('btn-add-trip');
-        if (addBtn) addBtn.addEventListener('click', openAddModal);
-      }
 
 
       const reportBtn = document.getElementById('btn-report-trips');

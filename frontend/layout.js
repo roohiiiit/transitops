@@ -200,7 +200,14 @@
               <span class="role-dot"></span>
               <span id="role-display" style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin-left: 8px;">${role}</span>
             </div>
-            <button onclick="localStorage.removeItem('transitops_token'); window.location.reload();" class="btn btn--ghost" style="padding: 4px 8px; font-size: 12px; border: 1px solid var(--border-color); color: #ff4d4f;">Sign Out</button>
+            <button id="theme-toggle" class="theme-switch" onclick="TransitOps.toggleTheme()" aria-label="Toggle Theme">
+              <span class="theme-icon-moon">🌙</span>
+              <span class="theme-switch-track">
+                <span class="theme-switch-knob"></span>
+              </span>
+              <span class="theme-icon-sun">☀️</span>
+            </button>
+            <button onclick="localStorage.removeItem('transitops_token'); window.location.reload();" class="btn btn--ghost btn--small" style="color: #ff4d4f;">Sign Out</button>
           </div>
         </div>
       </header>

@@ -5,17 +5,28 @@
 (function () {
   'use strict';
 
+  let filterType = 'All Types';
+  let filterStatus = 'All Statuses';
+  let filterRegion = 'All Regions';
+
   // ── Compute KPIs ──
   function getDashboardMetrics() {
-    const vehicles = DataLayer.getVehicles();
-    const drivers = DataLayer.getDrivers();
+    let vehicles = DataLayer.getVehicles();
+    let drivers = DataLayer.getDrivers();
+    let trips = DataLayer.getTrips();
+
+    if (filterType !== 'All Types') vehicles = vehicles.filter(v => v.type === filterType);
+    if (filterStatus !== 'All Statuses') vehicles = vehicles.filter(v => v.status === filterStatus);
+    if (filterRegion !== 'All Regions') vehicles = vehicles.filter(v => v.region === filterRegion);
 
     const activeVehicles = vehicles.filter(v => v.status !== 'Retired').length;
     const availableVehicles = vehicles.filter(v => v.status === 'Available').length;
     const inShopVehicles = vehicles.filter(v => v.status === 'In Shop').length;
     const onTripVehicles = vehicles.filter(v => v.status === 'On Trip').length;
 
-    const activeDrivers = drivers.filter(d => d.status !== 'Suspended').length;
+    const driversOnDuty = drivers.filter(d => d.status === 'On Trip').length;
+    const activeTrips = trips.filter(t => t.status === 'Dispatched').length;
+    const pendingTrips = trips.filter(t => t.status === 'Draft').length;
 
     const utilization = activeVehicles > 0 
       ? Math.round((onTripVehicles / activeVehicles) * 100) 
@@ -25,7 +36,9 @@
       activeVehicles,
       availableVehicles,
       inShopVehicles,
-      activeDrivers,
+      driversOnDuty,
+      activeTrips,
+      pendingTrips,
       utilization
     };
   }
@@ -34,23 +47,25 @@
   function buildFilterBar() {
     return `
       <div class="dash-filters">
-        <select class="form-input dash-filter-select">
-          <option>All Types</option>
-          <option>Heavy Truck</option>
-          <option>Medium Truck</option>
-          <option>LCV</option>
-          <option>Mini Truck</option>
+        <select class="form-input dash-filter-select" id="filter-type">
+          <option ${filterType === 'All Types' ? 'selected' : ''}>All Types</option>
+          <option ${filterType === 'Heavy Truck' ? 'selected' : ''}>Heavy Truck</option>
+          <option ${filterType === 'Medium Truck' ? 'selected' : ''}>Medium Truck</option>
+          <option ${filterType === 'LCV' ? 'selected' : ''}>LCV</option>
+          <option ${filterType === 'Mini Truck' ? 'selected' : ''}>Mini Truck</option>
         </select>
-        <select class="form-input dash-filter-select">
-          <option>All Statuses</option>
-          <option>Available</option>
-          <option>On Trip</option>
-          <option>In Shop</option>
+        <select class="form-input dash-filter-select" id="filter-status">
+          <option ${filterStatus === 'All Statuses' ? 'selected' : ''}>All Statuses</option>
+          <option ${filterStatus === 'Available' ? 'selected' : ''}>Available</option>
+          <option ${filterStatus === 'On Trip' ? 'selected' : ''}>On Trip</option>
+          <option ${filterStatus === 'In Shop' ? 'selected' : ''}>In Shop</option>
         </select>
-        <select class="form-input dash-filter-select">
-          <option>All Regions</option>
-          <option>South Zone</option>
-          <option>North Zone</option>
+        <select class="form-input dash-filter-select" id="filter-region">
+          <option ${filterRegion === 'All Regions' ? 'selected' : ''}>All Regions</option>
+          <option ${filterRegion === 'South Zone' ? 'selected' : ''}>South Zone</option>
+          <option ${filterRegion === 'North Zone' ? 'selected' : ''}>North Zone</option>
+          <option ${filterRegion === 'East Zone' ? 'selected' : ''}>East Zone</option>
+          <option ${filterRegion === 'West Zone' ? 'selected' : ''}>West Zone</option>
         </select>
       </div>
     `;
@@ -72,9 +87,17 @@
           <div class="dash-kpi-count animate-number" data-metric-id="dash-shop-vehicles" data-value="${metrics.inShopVehicles}">${metrics.inShopVehicles}</div>
           <div class="dash-kpi-label">Vehicles in Maintenance</div>
         </div>
-        <div class="dash-kpi-card click-card stagger-card" data-target="drivers" data-filter="Available" style="--card-accent: var(--status-available);">
-          <div class="dash-kpi-count animate-number" data-metric-id="dash-active-drivers" data-value="${metrics.activeDrivers}">${metrics.activeDrivers}</div>
-          <div class="dash-kpi-label">Active Drivers</div>
+        <div class="dash-kpi-card click-card stagger-card" data-target="drivers" data-filter="On Trip" style="--card-accent: var(--status-ontrip);">
+          <div class="dash-kpi-count animate-number" data-metric-id="dash-onduty-drivers" data-value="${metrics.driversOnDuty}">${metrics.driversOnDuty}</div>
+          <div class="dash-kpi-label">Drivers On Duty</div>
+        </div>
+        <div class="dash-kpi-card click-card stagger-card" data-target="trips" data-filter="Dispatched" style="--card-accent: var(--status-ontrip);">
+          <div class="dash-kpi-count animate-number" data-metric-id="dash-active-trips" data-value="${metrics.activeTrips}">${metrics.activeTrips}</div>
+          <div class="dash-kpi-label">Active Trips</div>
+        </div>
+        <div class="dash-kpi-card click-card stagger-card" data-target="trips" data-filter="Draft" style="--card-accent: var(--text-secondary);">
+          <div class="dash-kpi-count animate-number" data-metric-id="dash-pending-trips" data-value="${metrics.pendingTrips}">${metrics.pendingTrips}</div>
+          <div class="dash-kpi-label">Pending Trips</div>
         </div>
         <div class="dash-kpi-card dash-kpi-card--headline stagger-card" style="--card-accent: var(--accent);">
           <div class="dash-kpi-count animate-number" data-metric-id="dash-utilization" data-value="${metrics.utilization}" data-suffix="%">${metrics.utilization}%</div>
@@ -162,6 +185,19 @@
 
     Layout.setPageContent(html);
 
+    document.getElementById('filter-type').addEventListener('change', (e) => {
+      filterType = e.target.value;
+      renderDashboardPage();
+    });
+    document.getElementById('filter-status').addEventListener('change', (e) => {
+      filterStatus = e.target.value;
+      renderDashboardPage();
+    });
+    document.getElementById('filter-region').addEventListener('change', (e) => {
+      filterRegion = e.target.value;
+      renderDashboardPage();
+    });
+
     // Bind click events for navigation
     const clickCards = document.querySelectorAll('.dash-kpi-card.click-card');
     clickCards.forEach(card => {
@@ -173,6 +209,8 @@
           window.TransitOpsVehicles.setFilter(filter);
         } else if (target === 'drivers' && window.TransitOpsDrivers) {
           window.TransitOpsDrivers.setFilter(filter);
+        } else if (target === 'trips' && window.TransitOpsTrips) {
+          // If a trips specific filter exposes itself in the future
         }
 
         window.TransitOps.navigate(target);

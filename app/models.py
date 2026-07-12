@@ -1,6 +1,5 @@
 from datetime import datetime, timezone
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, Float, ForeignKey
-from sqlalchemy.orm import relationship
 from app.database import Base
 
 class User(Base):
@@ -23,6 +22,7 @@ class Vehicle(Base):
     maxLoadKg = Column(Float, nullable=False)
     odometer = Column(Float, nullable=False, default=0.0)
     acquisitionCost = Column(Float, nullable=False, default=0.0)
+    region = Column(String, nullable=False, default="South Zone") # South Zone, North Zone, etc.
     status = Column(String, nullable=False, default="Available") # Available, On Trip, In Shop, Retired
 
 class Driver(Base):

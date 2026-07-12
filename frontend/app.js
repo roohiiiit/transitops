@@ -77,6 +77,7 @@
       }
     } else {
       await DataLayer.syncFromBackend();
+      initTheme();
       Layout.create();
       const role = DataLayer.getCurrentRole();
       if (role === 'Safety Officer') navigate('safety-dashboard');
@@ -85,12 +86,40 @@
     }
   });
 
+  // ── Theme Logic ──
+  function initTheme() {
+    const savedTheme = localStorage.getItem('transitops_theme') || 'dark';
+    if (savedTheme === 'light') {
+      document.documentElement.setAttribute('data-theme', 'light');
+    } else {
+      document.documentElement.removeAttribute('data-theme');
+    }
+    updateThemeToggleButton();
+  }
+
+  function toggleTheme() {
+    const current = document.documentElement.getAttribute('data-theme');
+    if (current === 'light') {
+      document.documentElement.removeAttribute('data-theme');
+      localStorage.setItem('transitops_theme', 'dark');
+    } else {
+      document.documentElement.setAttribute('data-theme', 'light');
+      localStorage.setItem('transitops_theme', 'light');
+    }
+    updateThemeToggleButton();
+  }
+
+  function updateThemeToggleButton() {
+    // CSS handles the visual state based on data-theme attribute on documentElement
+  }
+
   // ── Public API ──
   window.TransitOps = window.TransitOps || {};
   Object.assign(window.TransitOps, {
     navigate:     navigate,
     registerPage: registerPage,
     currentPage:  () => currentPage,
+    toggleTheme:  toggleTheme,
   });
 
 

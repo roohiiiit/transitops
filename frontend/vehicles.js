@@ -142,8 +142,8 @@
                 <span class="vr-card-icon">${getTypeIcon(v.type)}</span>
                 <span class="status-pill ${pillClass}${flashClass}">${v.status}</span>
               </div>
-              <div class="vr-card-reg font-mono">${escapeHtml(v.regNumber)}</div>
-              <div class="vr-card-name">${escapeHtml(v.name)}</div>
+              <div class="vr-card-name" style="font-size: 15px; font-weight: 600; color: var(--text-primary); margin-bottom: 2px;">${escapeHtml(v.name || 'Unnamed Vehicle')}</div>
+              <div class="vr-card-reg font-mono" style="font-size: 13px; color: var(--text-secondary);">${escapeHtml(v.regNumber)}</div>
               <div class="vr-card-type">${escapeHtml(v.type)}</div>
               <div class="vr-card-stats">
                 <div class="vr-stat">
@@ -222,6 +222,15 @@
                   <label class="form-label" for="v-type">Type</label>
                   <select class="form-input" id="v-type">
                     ${VEHICLE_TYPES.map(t => `<option value="${t}">${t}</option>`).join('')}
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="v-region">Region</label>
+                  <select class="form-input" id="v-region">
+                    <option value="South Zone">South Zone</option>
+                    <option value="North Zone">North Zone</option>
+                    <option value="East Zone">East Zone</option>
+                    <option value="West Zone">West Zone</option>
                   </select>
                 </div>
                 <div class="form-group">
@@ -334,6 +343,7 @@
         regNumber: document.getElementById('v-reg').value.trim(),
         name: document.getElementById('v-name').value.trim(),
         type: document.getElementById('v-type').value,
+        region: document.getElementById('v-region').value,
         maxLoadKg: Number(document.getElementById('v-load').value),
         odometer: Number(document.getElementById('v-odo').value),
         acquisitionCost: Number(document.getElementById('v-cost').value),
@@ -376,16 +386,20 @@
           </div>
           <div class="drawer-body">
             <div class="detail-section">
-              <div class="detail-label">Registration Number</div>
-              <div class="detail-value font-mono">${v.regNumber}</div>
+              <div class="detail-label">Name / Model</div>
+              <div class="detail-value" style="font-size: 16px; font-weight: 600;">${v.name || 'Unnamed Vehicle'}</div>
             </div>
             <div class="detail-section">
-              <div class="detail-label">Name / Model</div>
-              <div class="detail-value">${v.name || '—'}</div>
+              <div class="detail-label">Registration Number</div>
+              <div class="detail-value font-mono" style="color: var(--text-secondary);">${v.regNumber}</div>
             </div>
             <div class="detail-section">
               <div class="detail-label">Type</div>
               <div class="detail-value">${v.type}</div>
+            </div>
+            <div class="detail-section">
+              <div class="detail-label">Region</div>
+              <div class="detail-value">${v.region || '—'}</div>
             </div>
             <div class="detail-section">
               <div class="detail-label">Max Load Capacity</div>

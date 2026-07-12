@@ -34,6 +34,7 @@ class VehicleBase(BaseModel):
     maxLoadKg: float = Field(..., ge=0)
     odometer: float = Field(..., ge=0)
     acquisitionCost: float = Field(..., ge=0)
+    region: str
     status: str
 
 class VehicleCreate(VehicleBase):
