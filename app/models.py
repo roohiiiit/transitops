@@ -50,6 +50,8 @@ class Trip(Base):
     status = Column(String, nullable=False, default="Draft") # Draft, Dispatched, Completed, Cancelled
     actualOdometer = Column(Float, nullable=True)
     fuelConsumed = Column(Float, nullable=True)
+    current_lat = Column(Float, nullable=True)
+    current_lon = Column(Float, nullable=True)
 
 class MaintenanceLog(Base):
     __tablename__ = "maintenance_logs"

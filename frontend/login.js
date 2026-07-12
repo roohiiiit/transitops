@@ -124,8 +124,16 @@
       // Sync backend state arrays to local memory before starting UI
       await DataLayer.syncFromBackend();
 
-      Layout.create();
-      window.TransitOps.navigate('dashboard');
+      if (role === 'Driver') {
+        if (window.TransitOps.DriverView) {
+          window.TransitOps.DriverView.create();
+        } else {
+          console.error("DriverView module not found");
+        }
+      } else {
+        Layout.create();
+        window.TransitOps.navigate('dashboard');
+      }
 
     } catch (err) {
       errorDiv.textContent = err.message || 'An error occurred during sign in.';

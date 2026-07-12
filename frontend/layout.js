@@ -62,6 +62,7 @@
     { id: 'vehicles',    label: 'Vehicles',         icon: ICONS.vehicles },
     { id: 'drivers',     label: 'Drivers',          icon: ICONS.drivers },
     { id: 'trips',       label: 'Trips',            icon: ICONS.trips },
+    { id: 'create-trip', label: 'Create Trip',      icon: ICONS.trips },
     { id: 'maintenance', label: 'Maintenance',      icon: ICONS.maintenance },
     { id: 'fuel',        label: 'Fuel & Expense',   icon: ICONS.fuel },
     { id: 'reports',     label: 'Reports',          icon: ICONS.reports },
@@ -73,6 +74,7 @@
     vehicles:    'Vehicle Registry',
     drivers:     'Driver Management',
     trips:       'Trip Management',
+    'create-trip': 'Schedule New Trip',
     maintenance: 'Maintenance',
     fuel:        'Fuel & Expense',
     reports:     'Reports & Analytics',
@@ -81,9 +83,9 @@
 
   // ── Role-Based Access ──
   const ROLE_PERMISSIONS = {
-    'Fleet Manager':     ['Dashboard', 'Vehicles', 'Drivers', 'Trips', 'Maintenance', 'Fuel & Expense', 'Reports', 'Table Preview'],
+    'Fleet Manager':     ['Dashboard', 'Vehicles', 'Drivers', 'Trips', 'Create Trip', 'Maintenance', 'Fuel & Expense', 'Reports', 'Table Preview'],
     'Driver':            ['Dashboard', 'Trips'],
-    'Safety Officer':    ['Dashboard', 'Drivers', 'Trips'],
+    'Safety Officer':    ['Dashboard', 'Drivers', 'Trips', 'Create Trip'],
     'Financial Analyst': ['Dashboard', 'Vehicles', 'Fuel & Expense', 'Reports', 'Table Preview'],
   };
 
@@ -177,9 +179,12 @@
             <input type="text" class="search-input" placeholder="Search fleet..." id="global-search">
             <span class="search-icon">${svg(ICONS.search, 15)}</span>
           </div>
-          <div class="role-switcher-wrapper" style="pointer-events: none;">
-            <span class="role-dot"></span>
-            <span id="role-display" style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin-left: 8px;">${role}</span>
+          <div class="role-switcher-wrapper" style="display: flex; align-items: center; gap: 12px;">
+            <div style="display: flex; align-items: center;">
+              <span class="role-dot"></span>
+              <span id="role-display" style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin-left: 8px;">${role}</span>
+            </div>
+            <button onclick="localStorage.removeItem('transitops_token'); window.location.reload();" class="btn btn--ghost" style="padding: 4px 8px; font-size: 12px; border: 1px solid var(--border-color); color: #ff4d4f;">Sign Out</button>
           </div>
         </div>
       </header>

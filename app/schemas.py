@@ -73,6 +73,12 @@ class TripBase(BaseModel):
     status: Optional[str] = "Draft"
     actualOdometer: Optional[float] = None
     fuelConsumed: Optional[float] = None
+    current_lat: Optional[float] = None
+    current_lon: Optional[float] = None
+
+class TripLocationUpdate(BaseModel):
+    lat: float
+    lon: float
 
 class TripCreate(TripBase):
     pass

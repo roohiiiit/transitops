@@ -13,7 +13,7 @@ from app.schemas import (
     UserCreate, UserResponse, Token, TokenData,
     VehicleCreate, VehicleResponse,
     DriverCreate, DriverResponse,
-    TripCreate, TripResponse,
+    TripCreate, TripResponse, TripLocationUpdate,
     MaintenanceLogCreate, MaintenanceLogResponse,
     FuelLogCreate, FuelLogResponse,
     ExpenseCreate, ExpenseResponse
@@ -192,13 +192,11 @@ async def get_current_user(
         )
     return user
 
+from fastapi.responses import FileResponse
+
 @app.get("/", tags=["General"])
 def read_root():
-    return {
-        "message": "Welcome to the Custom Database Authentication Service!",
-        "docs_url": "/docs",
-        "status": "online"
-    }
+    return FileResponse("frontend/index.html")
 
 # --- Authentication ---
 @app.post("/auth/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED, tags=["Authentication"])
@@ -343,9 +341,57 @@ def list_trips(db: Session = Depends(get_db), current_user: User = Depends(get_c
 
 @app.post("/trips", response_model=TripResponse, status_code=status.HTTP_201_CREATED, tags=["Trips"])
 def create_trip(trip: TripCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    # Validate vehicle assignment if provided
+    if trip.vehicleId:
+        vehicle = db.query(Vehicle).filter(Vehicle.id == trip.vehicleId).first()
+        if not vehicle:
+            raise HTTPException(status_code=400, detail="Assigned vehicle not found")
+        if vehicle.status != "Available":
+            raise HTTPException(status_code=400, detail=f"Vehicle '{vehicle.regNumber}' is currently {vehicle.status} and cannot be assigned")
+        if trip.cargoWeightKg > vehicle.maxLoadKg:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Cargo weight ({trip.cargoWeightKg}kg) exceeds vehicle capacity ({vehicle.maxLoadKg}kg)"
+            )
+
+    # Validate driver assignment if provided
+    if trip.driverId:
+        driver = db.query(Driver).filter(Driver.id == trip.driverId).first()
+        if not driver:
+            raise HTTPException(status_code=400, detail="Assigned driver not found")
+        if driver.status != "Available":
+            raise HTTPException(status_code=400, detail=f"Driver '{driver.name}' is currently {driver.status} and cannot be assigned")
+        current_date = date.today().isoformat()
+        if driver.licenseExpiry < current_date:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Driver '{driver.name}' has an expired license (Expired on {driver.licenseExpiry})"
+            )
+
     db_trip = Trip(**trip.model_dump())
     db_trip.status = "Draft"
     db.add(db_trip)
+    db.commit()
+    db.refresh(db_trip)
+    return db_trip
+
+@app.get("/trips/{id}", response_model=TripResponse, tags=["Trips"])
+def get_trip(id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    db_trip = db.query(Trip).filter(Trip.id == id).first()
+    if not db_trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    return db_trip
+
+@app.put("/trips/{id}/location", response_model=TripResponse, tags=["Trips"])
+def update_trip_location(id: int, location: TripLocationUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    db_trip = db.query(Trip).filter(Trip.id == id).first()
+    if not db_trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    if db_trip.status != "Dispatched":
+        raise HTTPException(status_code=400, detail="Only dispatched trips can have live location updates")
+    
+    db_trip.current_lat = location.lat
+    db_trip.current_lon = location.lon
     db.commit()
     db.refresh(db_trip)
     return db_trip
@@ -528,10 +574,4 @@ def create_expense(expense: ExpenseCreate, db: Session = Depends(get_db), curren
 
 
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
-
-@app.get("/")
-def read_index():
-    return FileResponse("frontend/index.html")
-
 app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
