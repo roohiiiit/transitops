@@ -1,11 +1,19 @@
 import os
 from datetime import datetime, date
 from typing import List, Optional
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 import jwt
+import re
+import io
+import json
+import os
+from google import genai
+from PIL import Image
+
+client = genai.Client(api_key=os.getenv("GEMINI_API_KEY", ""))
 
 from app.database import Base, engine, get_db, SessionLocal
 from app.models import User, Vehicle, Driver, Trip, MaintenanceLog, FuelLog, Expense
@@ -192,11 +200,7 @@ async def get_current_user(
         )
     return user
 
-from fastapi.responses import FileResponse
 
-@app.get("/", tags=["General"])
-def read_root():
-    return FileResponse("frontend/index.html")
 
 # --- Authentication ---
 @app.post("/auth/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED, tags=["Authentication"])
@@ -588,6 +592,55 @@ def update_gps_status(
     db.commit()
     db.refresh(db_trip)
     return {"id": id, "gps_broadcasting": db_trip.gps_broadcasting}
+# --- Bill Scanning (OCR) ---
+@app.post("/scan-bill", tags=["OCR"])
+async def scan_bill(file: UploadFile = File(...), current_user: User = Depends(get_current_user)):
+    if not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="Only image files are supported for OCR")
+    
+    try:
+        contents = await file.read()
+        image = Image.open(io.BytesIO(contents))
+        
+        # Use Gemini API to extract details from the receipt
+        prompt = """
+        You are an assistant that extracts structured data from receipt images.
+        Analyze the receipt image and output a JSON object with the following keys:
+        - "type": Determine if this is "Fuel", "Toll", "Parking", "Insurance", "Permit", or "Other".
+        - "cost": The total cost as a number (float), or null if not found.
+        - "liters": The total volume in liters as a number (float), or null if not found or if the receipt is not for Fuel.
+        - "date": The date of the receipt in "YYYY-MM-DD" format, or the current date if not found.
+        
+        Output ONLY the raw JSON object, without any markdown formatting, backticks, or extra text.
+        """
+        
+        response = client.models.generate_content(
+            model='gemini-3.5-flash',
+            contents=[image, prompt]
+        )
+        
+        try:
+            # Clean up the response text in case it has markdown or extra whitespace
+            text_response = response.text.strip()
+            if text_response.startswith("```json"):
+                text_response = text_response[7:]
+            if text_response.endswith("```"):
+                text_response = text_response[:-3]
+            
+            extracted = json.loads(text_response.strip())
+        except json.JSONDecodeError:
+            # Fallback if the AI gives poorly formatted JSON
+            print(f"Failed to parse JSON from Gemini: {response.text}")
+            extracted = {
+                "type": "Other",
+                "cost": None,
+                "liters": None,
+                "date": date.today().isoformat()
+            }
+            
+        return extracted
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 from fastapi.staticfiles import StaticFiles
 app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")

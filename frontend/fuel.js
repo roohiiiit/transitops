@@ -343,6 +343,10 @@
         <div style="display: flex; gap: 12px;">
           <button class="btn btn--ghost" id="btn-report-fuel">Generate Report</button>
           ${canCreate ? `
+            <input type="file" id="fe-scan-upload" accept="image/*" capture="environment" style="display: none;">
+            <button class="btn btn--ghost" id="btn-scan-bill" style="margin-right: 8px;">
+              <span class="btn-icon">📷</span> Scan Bill
+            </button>
             <button class="btn btn--accent" id="btn-add-expense">
               <span class="btn-icon">+</span> Log Spend
             </button>
@@ -369,6 +373,50 @@
       if (canCreate) {
         const addBtn = document.getElementById('btn-add-expense');
         if (addBtn) addBtn.addEventListener('click', openAddModal);
+
+        const scanBtn = document.getElementById('btn-scan-bill');
+        const scanUpload = document.getElementById('fe-scan-upload');
+        if (scanBtn && scanUpload) {
+          scanBtn.addEventListener('click', () => {
+            scanUpload.click();
+          });
+
+          scanUpload.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            scanBtn.innerHTML = '<span class="btn-icon">⏳</span> Scanning...';
+            scanBtn.disabled = true;
+            
+            try {
+              const result = await DataLayer.scanBill(file);
+              openAddModal();
+              
+              setTimeout(() => {
+                if (result.date) document.getElementById('fe-date').value = result.date;
+                
+                if (result.type === 'Fuel') {
+                   document.getElementById('tab-log-fuel').click();
+                   if (result.cost) document.getElementById('fe-fuel-cost').value = result.cost;
+                   if (result.liters) document.getElementById('fe-liters').value = result.liters;
+                } else {
+                   document.getElementById('tab-log-expense').click();
+                   if (result.type && document.querySelector(`#fe-type option[value="${result.type}"]`)) {
+                       document.getElementById('fe-type').value = result.type;
+                   }
+                   if (result.cost) document.getElementById('fe-expense-cost').value = result.cost;
+                }
+              }, 50);
+              
+            } catch (err) {
+              alert('Failed to scan bill: ' + err.message);
+            } finally {
+              scanBtn.innerHTML = '<span class="btn-icon">📷</span> Scan Bill';
+              scanBtn.disabled = false;
+              scanUpload.value = '';
+            }
+          });
+        }
       }
 
       const reportBtn = document.getElementById('btn-report-fuel');

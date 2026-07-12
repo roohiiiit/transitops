@@ -317,6 +317,26 @@
     return log;
   }
 
+  // ── Bill Scanning (OCR) ──
+  async function scanBill(file) {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const token = localStorage.getItem('transitops_token');
+    const headers = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const res = await fetch(`${API_URL}/scan-bill`, {
+      method: 'POST',
+      headers: headers,
+      body: formData
+    });
+    
+    return await handleResponse(res);
+  }
+
 
   // ── Accessors — Other Expenses ──
   function getExpenses() {
@@ -499,6 +519,9 @@
     getFuelLogs,
     getFuelByVehicle,
     addFuelLog,
+
+    // Bill Scanning (OCR)
+    scanBill,
 
     // Expenses
     getExpenses,

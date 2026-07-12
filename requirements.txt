@@ -6,3 +6,6 @@ pyjwt
 python-multipart
 python-dotenv
 psycopg2-binary
+pytesseract
+Pillow
+google-genai
