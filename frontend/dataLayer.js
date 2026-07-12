@@ -15,11 +15,12 @@
   let mockMaintenanceLogs = [];
   let mockFuelLogs = [];
   let mockExpenses = [];
-  let mockReports = [
+    let mockReports = [
     { id: 'R001', name: 'Vehicle Registry — 10 Jul 2026', sourceSection: 'Vehicles', format: 'CSV', generatedAt: '2026-07-10T09:30:00Z', rowCount: 12 },
     { id: 'R002', name: 'Maintenance Logs — 11 Jul 2026', sourceSection: 'Maintenance', format: 'PDF', generatedAt: '2026-07-11T14:15:00Z', rowCount: 6 },
   ];
   let currentRole = localStorage.getItem('transitops_role') || 'Fleet Manager';
+  let currentUserEmail = null;
 
   // Helper to get authorization headers
   function getHeaders() {
@@ -51,13 +52,14 @@
 
     try {
       const headers = getHeaders();
-      const [v, d, t, m, f, e] = await Promise.all([
+      const [v, d, t, m, f, e, user] = await Promise.all([
         fetch(`${API_URL}/vehicles`, { headers }).then(handleResponse),
         fetch(`${API_URL}/drivers`, { headers }).then(handleResponse),
         fetch(`${API_URL}/trips`, { headers }).then(handleResponse),
         fetch(`${API_URL}/maintenance`, { headers }).then(handleResponse),
         fetch(`${API_URL}/fuel`, { headers }).then(handleResponse),
-        fetch(`${API_URL}/expenses`, { headers }).then(handleResponse)
+        fetch(`${API_URL}/expenses`, { headers }).then(handleResponse),
+        fetch(`${API_URL}/users/me`, { headers }).then(handleResponse)
       ]);
 
       mockVehicles = v;
@@ -66,6 +68,7 @@
       mockMaintenanceLogs = m;
       mockFuelLogs = f;
       mockExpenses = e;
+      currentUserEmail = user.email;
     } catch (err) {
       console.error('Failed to sync backend state:', err);
     }
@@ -229,6 +232,18 @@
     const idx = mockTrips.findIndex(t => t.id === id);
     if (idx !== -1) mockTrips[idx] = trip;
     await syncFromBackend(); // Sync vehicle and driver statuses
+    return trip;
+  }
+
+  async function acceptTrip(id) {
+    id = Number(id);
+    const res = await fetch(`${API_URL}/trips/${id}/accept`, {
+      method: 'POST',
+      headers: getHeaders()
+    });
+    const trip = await handleResponse(res);
+    const idx = mockTrips.findIndex(t => t.id === id);
+    if (idx !== -1) mockTrips[idx] = trip;
     return trip;
   }
 
@@ -510,6 +525,7 @@
     getTripsByStatus,
     addTrip,
     dispatchTrip,
+    acceptTrip,
     completeTrip,
     cancelTrip,
 
@@ -543,6 +559,7 @@
     getReports,
     getMockRevenuePerVehicle,
     generateReport,
+    getCurrentUserEmail: () => currentUserEmail
   };
 
 })();

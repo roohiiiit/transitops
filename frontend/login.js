@@ -44,8 +44,8 @@
             
             <form id="login-form" novalidate>
               <div class="form-group" style="margin-bottom: 20px;">
-                <label class="form-label" for="l-email">Email Address</label>
-                <input type="email" class="form-input" id="l-email" placeholder="e.g. manager@transitops.com" required>
+                <label class="form-label" for="l-email">Email or Username</label>
+                <input type="text" class="form-input" id="l-email" placeholder="e.g. rajeshkumar or manager" required>
               </div>
               
               <div class="form-group" style="margin-bottom: 24px;">
@@ -133,7 +133,13 @@
         }
       } else {
         Layout.create();
-        window.TransitOps.navigate('dashboard');
+        if (role === 'Safety Officer') {
+          window.TransitOps.navigate('safety-dashboard');
+        } else if (role === 'Financial Officer') {
+          window.TransitOps.navigate('finance-dashboard');
+        } else {
+          window.TransitOps.navigate('dashboard');
+        }
       }
 
     } catch (err) {

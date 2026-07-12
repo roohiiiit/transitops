@@ -78,7 +78,10 @@
     } else {
       await DataLayer.syncFromBackend();
       Layout.create();
-      navigate('dashboard');
+      const role = DataLayer.getCurrentRole();
+      if (role === 'Safety Officer') navigate('safety-dashboard');
+      else if (role === 'Financial Officer') navigate('finance-dashboard');
+      else navigate('dashboard');
     }
   });
 

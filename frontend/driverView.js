@@ -409,18 +409,26 @@
     stop: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>`,
     signal_offline: `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1" fill="currentColor"/><line x1="2" y1="2" x2="22" y2="22" stroke-width="2"/></svg>`,
     signal_online: `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1" fill="currentColor"/></svg>`,
+    alert: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`
   };
 
   // ─── Trip Selection Screen ────────────────────────────────
   async function create() {
     document.body.className = 'driver-view-active';
     const allTrips = DataLayer.getTrips();
-    const dispatchedTrips = allTrips.filter(t => t.status === 'Dispatched');
-    renderSelectionScreen(dispatchedTrips);
+    const myEmail = DataLayer.getCurrentUserEmail();
+    const allDrivers = DataLayer.getDrivers();
+    const myDriver = allDrivers.find(d => d.email === myEmail);
+    const myDriverId = myDriver ? myDriver.id : null;
+
+    const dispatchedTrips = allTrips.filter(t => t.status === 'Dispatched' && t.driverId === myDriverId);
+    const acceptedTrips = allTrips.filter(t => t.status === 'Accepted' && t.driverId === myDriverId);
+    renderSelectionScreen(dispatchedTrips, acceptedTrips);
   }
 
-  function renderSelectionScreen(trips) {
+  function renderSelectionScreen(dispatchedTrips, acceptedTrips) {
     let listHtml = '';
+    const trips = [...dispatchedTrips, ...acceptedTrips];
 
     if (trips.length === 0) {
       listHtml = `
@@ -431,14 +439,16 @@
         </div>
       `;
     } else {
-      listHtml = trips.map(t => `
+      listHtml = trips.map(t => {
+        const isAccepted = t.status === 'Accepted';
+        return `
         <div class="driver-trip-card" onclick="window.TransitOps.DriverView.selectTrip(${t.id})">
-          <div class="driver-trip-id">Trip #${String(t.id).padStart(3, '0')}</div>
+          <div class="driver-trip-id">Trip #${String(t.id).padStart(3, '0')} <span style="float: right; color: ${isAccepted ? '#2ec4b6' : '#ff9f1c'}">${t.status}</span></div>
           <div class="driver-trip-route">${t.source} → ${t.destination}</div>
           <div class="driver-trip-meta">Cargo: ${t.cargoWeightKg} kg &nbsp;·&nbsp; ${t.plannedDistanceKm} km</div>
-          <button class="driver-select-btn">Select This Trip</button>
+          <button class="driver-select-btn" style="${isAccepted ? 'background: #2ec4b6; color: #fff;' : ''}">${isAccepted ? 'Start Mission Control' : 'Accept Ride'}</button>
         </div>
-      `).join('');
+      `}).join('');
     }
 
     document.body.innerHTML = `
@@ -456,11 +466,19 @@
   }
 
   // ─── Trip Selection ───────────────────────────────────────
-  function selectTrip(tripId) {
-    const allTrips = DataLayer.getTrips();
-    // coerce to same type with ==
+  async function selectTrip(tripId) {
+    let allTrips = DataLayer.getTrips();
     activeTrip = allTrips.find(t => t.id == tripId);
+    
     if (activeTrip) {
+      if (activeTrip.status === 'Dispatched') {
+        try {
+          activeTrip = await DataLayer.acceptTrip(tripId);
+        } catch (err) {
+          alert("Failed to accept trip.");
+          return;
+        }
+      }
       isBroadcasting = false;
       renderActiveMissionScreen();
     }
@@ -539,6 +557,37 @@
               <span id="mc-cta-text">Start Broadcasting GPS</span>
             </button>
 
+            <!-- Complete Ride Button -->
+            <button class="mc-cta-btn" style="background: #2ec4b6; color: #fff; box-shadow: 0 0 24px rgba(46,196,182,0.25); margin-top: 12px;" onclick="window.TransitOps.DriverView.completeRide()">
+              <span>✅</span>
+              <span>Complete Ride</span>
+            </button>
+
+            <!-- Report Issue Button -->
+            <button class="mc-cta-btn" style="background: transparent; border: 1px solid rgba(255,255,255,0.2); color: #F2F2F2; box-shadow: none; margin-top: 12px;" onclick="window.TransitOps.DriverView.reportIssue()">
+              <span>${ICONS.alert}</span>
+              <span>Report Issue</span>
+            </button>
+
+
+          </div>
+        </div>
+
+        <!-- Report Issue Modal -->
+        <div id="mc-issue-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.85); z-index: 1000; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(4px);">
+          <div style="background: #18181C; border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 28px; width: 100%; max-width: 400px; box-shadow: 0 16px 48px rgba(0,0,0,0.6); animation: mcSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);">
+            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+              <div style="width: 40px; height: 40px; border-radius: 10px; background: rgba(239,68,68,0.15); color: #EF4444; display: flex; align-items: center; justify-content: center;">
+                ${ICONS.alert}
+              </div>
+              <h3 style="font-size: 20px; font-weight: 600; color: #F2F2F2; margin: 0;">Report Vehicle Issue</h3>
+            </div>
+            <p style="font-size: 14px; color: #9CA3AF; margin-bottom: 24px; line-height: 1.5;">Describe the problem you are experiencing with this vehicle. This will alert the Safety Officer immediately.</p>
+            <textarea id="mc-issue-text" style="width: 100%; box-sizing: border-box; height: 120px; resize: none; margin-bottom: 24px; background: #0A0A0C; border: 1px solid rgba(255,255,255,0.15); color: #F2F2F2; border-radius: 12px; padding: 16px; font-family: 'Inter', sans-serif; font-size: 14px; outline: none; transition: border-color 0.2s;" placeholder="e.g. Engine making a knocking sound..." onfocus="this.style.borderColor='#D4FF4F'" onblur="this.style.borderColor='rgba(255,255,255,0.15)'"></textarea>
+            <div style="display: flex; gap: 12px;">
+              <button class="btn" style="flex: 1; background: transparent; border: 1px solid rgba(255,255,255,0.2); color: #F2F2F2; border-radius: 12px; height: 48px; font-weight: 600;" onclick="window.TransitOps.DriverView.closeIssueModal()">Cancel</button>
+              <button class="btn" style="flex: 1; background: #D4FF4F; color: #0A0A0C; border: none; border-radius: 12px; height: 48px; font-weight: 600; box-shadow: 0 0 16px rgba(212,255,79,0.2);" onclick="window.TransitOps.DriverView.submitIssue()">Submit Report</button>
+            </div>
           </div>
         </div>
       </div>
@@ -653,6 +702,89 @@
     window.TransitOps.showLogin();
   }
 
+  // ─── Complete Ride ────────────────────────────────────────
+  async function completeRide() {
+    if (!activeTrip) return;
+    const odo = prompt("Enter ending odometer (km):");
+    if (!odo) return;
+    const fuel = prompt("Enter fuel consumed (liters):");
+    if (!fuel) return;
+
+    try {
+      await DataLayer.completeTrip(activeTrip.id, parseFloat(odo), parseFloat(fuel));
+      alert("Ride completed successfully!");
+      goBack();
+    } catch (err) {
+      alert("Error completing ride: " + err.message);
+    }
+  }
+
+  // ─── Issue Reporting ──────────────────────────────────────
+  function reportIssue() {
+    if (!activeTrip) return;
+    const modal = document.getElementById('mc-issue-modal');
+    if (modal) {
+      modal.style.display = 'flex';
+      const textEl = document.getElementById('mc-issue-text');
+      if (textEl) {
+        textEl.value = '';
+        setTimeout(() => textEl.focus(), 50);
+      }
+    }
+  }
+
+  function closeIssueModal() {
+    const modal = document.getElementById('mc-issue-modal');
+    if (modal) {
+      modal.style.display = 'none';
+    }
+  }
+
+  async function submitIssue() {
+    const textEl = document.getElementById('mc-issue-text');
+    if (!textEl) return;
+    const msg = textEl.value.trim();
+    if (!msg) {
+      alert("Please enter a description.");
+      return;
+    }
+
+    const token = localStorage.getItem('transitops_token');
+    try {
+      const btn = document.querySelector('#mc-issue-modal .btn:nth-child(2)');
+      if (btn) btn.textContent = 'Submitting...';
+
+      const res = await fetch(`${API_URL}/alerts`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          driverId: activeTrip.driverId,
+          vehicleId: activeTrip.vehicleId,
+          message: msg
+        })
+      });
+
+      if (btn) btn.textContent = 'Submit Report';
+
+      if (res.ok) {
+        closeIssueModal();
+        if (window.TransitOpsAnimations) {
+          window.TransitOpsAnimations.showToast("Issue reported successfully", "success");
+        } else {
+          alert("Issue reported to Safety Officer successfully.");
+        }
+      } else {
+        alert("Failed to report issue.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error reporting issue.");
+    }
+  }
+
   // ─── Public API ───────────────────────────────────────────
   window.TransitOps = window.TransitOps || {};
   window.TransitOps.DriverView = {
@@ -660,7 +792,11 @@
     selectTrip,
     toggleBroadcast,
     goBack,
-    signOut
+    signOut,
+    completeRide,
+    reportIssue,
+    closeIssueModal,
+    submitIssue
   };
 
 })();

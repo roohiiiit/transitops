@@ -70,8 +70,10 @@
   // ── Navigation Config ──
   const NAV_ITEMS = [
     { id: 'dashboard',   label: 'Dashboard',       icon: ICONS.dashboard },
+    { id: 'safety-dashboard', label: 'Safety Dashboard', icon: ICONS.dashboard },
+    { id: 'finance-dashboard', label: 'Finance Dashboard', icon: ICONS.dashboard },
+    { id: 'alerts',      label: 'Vehicle Alerts',   icon: ICONS.alert || ICONS.dashboard },
     { id: 'vehicles',    label: 'Vehicles',         icon: ICONS.vehicles },
-    { id: 'drivers',     label: 'Drivers',          icon: ICONS.drivers },
     { id: 'trips',       label: 'Trips',            icon: ICONS.trips },
     { id: 'create-trip', label: 'Create Trip',      icon: ICONS.trips },
     { id: 'maintenance', label: 'Maintenance',      icon: ICONS.maintenance },
@@ -81,8 +83,10 @@
 
   const PAGE_TITLES = {
     dashboard:   'Dashboard',
+    'safety-dashboard': 'Safety Officer Dashboard',
+    'finance-dashboard': 'Financial Officer Dashboard',
+    alerts:      'Vehicle Alerts',
     vehicles:    'Vehicle Registry',
-    drivers:     'Driver Management',
     trips:       'Trip Management',
     'create-trip': 'Schedule New Trip',
     maintenance: 'Maintenance',
@@ -95,10 +99,10 @@
   // Real access control and authorization MUST be enforced server-side on every API call.
   // Never trust the client's role state to grant access to sensitive endpoints.
   const ROLE_PERMISSIONS = {
-    'Fleet Manager':     ['Dashboard', 'Vehicles', 'Drivers', 'Trips', 'Create Trip', 'Maintenance', 'Fuel & Expense', 'Reports'],
+    'Fleet Manager':     ['Dashboard', 'Vehicle Alerts', 'Vehicles', 'Trips', 'Create Trip', 'Maintenance', 'Fuel & Expense', 'Reports'],
     'Driver':            ['Dashboard', 'Trips'],
-    'Safety Officer':    ['Dashboard', 'Drivers', 'Trips', 'Create Trip'],
-    'Financial Analyst': ['Dashboard', 'Vehicles', 'Fuel & Expense', 'Reports'],
+    'Safety Officer':    ['Safety Dashboard', 'Vehicle Alerts', 'Trips', 'Create Trip'],
+    'Financial Officer': ['Finance Dashboard', 'Vehicles', 'Fuel & Expense', 'Reports'],
   };
 
   const ALL_ROLES = Object.keys(ROLE_PERMISSIONS);

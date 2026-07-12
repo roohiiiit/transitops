@@ -15,6 +15,7 @@
   const STATUS_CLASS = {
     'Draft': 'status-pill--shop', // gray/neutral
     'Dispatched': 'status-pill--ontrip', // orange/yellow
+    'Accepted': 'status-pill--ontrip', // orange/yellow
     'Completed': 'status-pill--available', // green
     'Cancelled': 'status-pill--retired', // red
   };
@@ -61,7 +62,7 @@
     const stats = {
       total: all.length,
       draft: all.filter(t => t.status === 'Draft').length,
-      dispatched: all.filter(t => t.status === 'Dispatched').length,
+      active: all.filter(t => t.status === 'Dispatched' || t.status === 'Accepted').length,
       completed: all.filter(t => t.status === 'Completed').length,
     };
 
@@ -76,8 +77,8 @@
           <div style="font-size: 24px; font-weight: 600; color: var(--accent); font-family: var(--font-display);">${stats.draft}</div>
         </div>
         <div class="stat-card" style="background: var(--bg-card); padding: 20px; border-radius: 8px; border: 1px solid var(--border-color);">
-          <div style="font-size: 12px; color: var(--text-muted); text-transform: uppercase; font-family: var(--font-mono); margin-bottom: 4px;">Dispatched</div>
-          <div style="font-size: 24px; font-weight: 600; color: #ff9f1c; font-family: var(--font-display);">${stats.dispatched}</div>
+          <div style="font-size: 12px; color: var(--text-muted); text-transform: uppercase; font-family: var(--font-mono); margin-bottom: 4px;">Active</div>
+          <div style="font-size: 24px; font-weight: 600; color: #ff9f1c; font-family: var(--font-display);">${stats.active}</div>
         </div>
         <div class="stat-card" style="background: var(--bg-card); padding: 20px; border-radius: 8px; border: 1px solid var(--border-color);">
           <div style="font-size: 12px; color: var(--text-muted); text-transform: uppercase; font-family: var(--font-mono); margin-bottom: 4px;">Completed</div>
@@ -88,7 +89,7 @@
   }
 
   function buildFilterTabs() {
-    const filters = ['All', 'Draft', 'Dispatched', 'Completed', 'Cancelled'];
+    const filters = ['All', 'Draft', 'Dispatched', 'Accepted', 'Completed', 'Cancelled'];
     return `
       <div class="filter-bar" style="margin-bottom: 16px; display: flex; gap: 8px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
         ${filters.map(f => `
@@ -121,8 +122,7 @@
       if (t.status === 'Draft') {
         actions.push(`<button class="btn btn--small btn--accent btn-dispatch" data-id="${t.id}">Dispatch</button>`);
         actions.push(`<button class="btn btn--small btn--danger btn-cancel" data-id="${t.id}">Cancel</button>`);
-      } else if (t.status === 'Dispatched') {
-        actions.push(`<button class="btn btn--small btn--accent btn-complete" data-id="${t.id}" style="background-color:#2ec4b6; border-color:#2ec4b6;">Complete</button>`);
+      } else if (t.status === 'Dispatched' || t.status === 'Accepted') {
         actions.push(`<button class="btn btn--small btn--danger btn-cancel" data-id="${t.id}">Cancel</button>`);
       }
 

@@ -23,7 +23,7 @@ if not api_key:
 client = genai.Client(api_key=api_key)
 
 from app.database import Base, engine, get_db, SessionLocal
-from app.models import User, Vehicle, Driver, Trip, MaintenanceLog, FuelLog, Expense
+from app.models import User, Vehicle, Driver, Trip, MaintenanceLog, FuelLog, Expense, Alert
 from app.schemas import (
     UserCreate, UserResponse, Token, TokenData,
     VehicleCreate, VehicleResponse,
@@ -31,7 +31,8 @@ from app.schemas import (
     TripCreate, TripResponse, TripLocationUpdate, TripGpsStatusUpdate,
     MaintenanceLogCreate, MaintenanceLogResponse,
     FuelLogCreate, FuelLogResponse,
-    ExpenseCreate, ExpenseResponse
+    ExpenseCreate, ExpenseResponse,
+    AlertCreate, AlertResponse
 )
 from app.security import (
     verify_password,
@@ -65,8 +66,8 @@ def seed_database(db: Session):
         return
 
     # Create users with role
-    roles = ["Fleet Manager", "Driver", "Safety Officer", "Financial Analyst"]
-    emails = ["manager@transitops.com", "driver@transitops.com", "safety@transitops.com", "analyst@transitops.com"]
+    roles = ["Fleet Manager", "Driver", "Safety Officer", "Financial Officer"]
+    emails = ["manager@transitops.com", "rajeshkumar@transitops.com", "safety@transitops.com", "finance@transitops.com"]
     for email, role in zip(emails, roles):
         db.add(User(
             email=email,
@@ -94,8 +95,8 @@ def seed_database(db: Session):
     
     # Create drivers
     mock_drivers = [
-        {"name": "Rajesh Kumar", "licenseNumber": "KA0120210045678", "licenseCategory": "HTV", "licenseExpiry": "2027-03-15", "contactNumber": "9876543210", "safetyScore": 92, "status": "Available"},
-        {"name": "Suresh Patil", "licenseNumber": "KA0320200098765", "licenseCategory": "HTV", "licenseExpiry": "2026-08-22", "contactNumber": "9876543211", "safetyScore": 87, "status": "On Trip"},
+        {"email": "rajeshkumar@transitops.com", "name": "Rajesh Kumar", "licenseNumber": "KA0120210045678", "licenseCategory": "HTV", "licenseExpiry": "2027-03-15", "contactNumber": "9876543210", "safetyScore": 92, "status": "Available"},
+        {"email": None, "name": "Suresh Patil", "licenseNumber": "KA0320200098765", "licenseCategory": "HTV", "licenseExpiry": "2026-08-22", "contactNumber": "9876543211", "safetyScore": 87, "status": "On Trip"},
         {"name": "Anil Sharma", "licenseNumber": "KA0120190034521", "licenseCategory": "LMV", "licenseExpiry": "2026-07-25", "contactNumber": "9876543212", "safetyScore": 78, "status": "Available"},
         {"name": "Vijay Reddy", "licenseNumber": "KA0220210067890", "licenseCategory": "HTV", "licenseExpiry": "2028-01-10", "contactNumber": "9876543213", "safetyScore": 95, "status": "On Trip"},
         {"name": "Manoj Singh", "licenseNumber": "KA0420200011223", "licenseCategory": "HTV", "licenseExpiry": "2026-06-30", "contactNumber": "9876543214", "safetyScore": 65, "status": "Suspended"},
@@ -166,6 +167,14 @@ def seed_database(db: Session):
     ]
     for e in mock_expenses:
         db.add(Expense(**e))
+
+    # Create alerts
+    mock_alerts = [
+        {"driverId": d_map["KA0120210045678"], "vehicleId": v_map["KA-01-AB-1234"], "message": "Engine making strange noise", "status": "Open"},
+        {"driverId": d_map["KA0320200098765"], "vehicleId": v_map["KA-03-CD-5678"], "message": "Brake pressure seems low", "status": "Resolved"}
+    ]
+    for a in mock_alerts:
+        db.add(Alert(**a))
 
     db.commit()
 
@@ -262,7 +271,11 @@ def login_for_access_token(
     else:
         login_attempts[ip] = (1, now)
 
-    user = db.query(User).filter(User.email == form_data.username).first()
+    username = form_data.username
+    if username and "@" not in username:
+        username = f"{username}@transitops.com"
+
+    user = db.query(User).filter(User.email == username).first()
     if not user or not verify_password(form_data.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -425,8 +438,8 @@ def update_trip_location(id: int, location: TripLocationUpdate, db: Session = De
     db_trip = db.query(Trip).filter(Trip.id == id).first()
     if not db_trip:
         raise HTTPException(status_code=404, detail="Trip not found")
-    if db_trip.status != "Dispatched":
-        raise HTTPException(status_code=400, detail="Only dispatched trips can have live location updates")
+    if db_trip.status not in ["Dispatched", "Accepted"]:
+        raise HTTPException(status_code=400, detail="Only active trips can have live location updates")
     
     db_trip.current_lat = location.lat
     db_trip.current_lon = location.lon
@@ -480,13 +493,30 @@ def dispatch_trip(id: int, db: Session = Depends(get_db), current_user: User = D
     db.refresh(db_trip)
     return db_trip
 
+@app.post("/trips/{id}/accept", response_model=TripResponse, tags=["Trips"])
+def accept_trip(id: int, db: Session = Depends(get_db), current_user: User = Depends(require_role(['Driver']))):
+    db_trip = db.query(Trip).filter(Trip.id == id).first()
+    if not db_trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    if db_trip.status != "Dispatched":
+        raise HTTPException(status_code=400, detail="Only dispatched trips can be accepted")
+
+    db_driver = db.query(Driver).filter(Driver.email == current_user.email).first()
+    if not db_driver or db_trip.driverId != db_driver.id:
+        raise HTTPException(status_code=403, detail="You can only accept trips assigned to you")
+
+    db_trip.status = "Accepted"
+    db.commit()
+    db.refresh(db_trip)
+    return db_trip
+
 @app.post("/trips/{id}/complete", response_model=TripResponse, tags=["Trips"])
 def complete_trip(id: int, actualOdometer: float, fuelConsumed: float, db: Session = Depends(get_db), current_user: User = Depends(require_role(['Driver', 'Fleet Manager']))):
     db_trip = db.query(Trip).filter(Trip.id == id).first()
     if not db_trip:
         raise HTTPException(status_code=404, detail="Trip not found")
-    if db_trip.status != "Dispatched":
-        raise HTTPException(status_code=400, detail="Only dispatched trips can be completed")
+    if db_trip.status != "Accepted" and db_trip.status != "Dispatched":
+        raise HTTPException(status_code=400, detail="Only accepted or dispatched trips can be completed")
 
     vehicle = db.query(Vehicle).filter(Vehicle.id == db_trip.vehicleId).first()
     driver = db.query(Driver).filter(Driver.id == db_trip.driverId).first()
@@ -675,6 +705,50 @@ async def scan_bill(file: UploadFile = File(...), current_user: User = Depends(g
         return extracted
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+# --- Alerts ---
+@app.post("/alerts", response_model=AlertResponse)
+def create_alert(alert: AlertCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    db_alert = Alert(**alert.model_dump())
+    db.add(db_alert)
+    db.commit()
+    db.refresh(db_alert)
+    return db_alert
+
+@app.get("/alerts", response_model=List[AlertResponse])
+def get_alerts(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    return db.query(Alert).order_by(Alert.created_at.desc()).all()
+
+@app.put("/alerts/{alert_id}/resolve", response_model=AlertResponse)
+def resolve_alert(alert_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    db_alert = db.query(Alert).filter(Alert.id == alert_id).first()
+    if not db_alert:
+        raise HTTPException(status_code=404, detail="Alert not found")
+    db_alert.status = "Resolved"
+    db.commit()
+    db.refresh(db_alert)
+    return db_alert
+
+@app.put("/alerts/{alert_id}/reopen", response_model=AlertResponse)
+def reopen_alert(alert_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    db_alert = db.query(Alert).filter(Alert.id == alert_id).first()
+    if not db_alert:
+        raise HTTPException(status_code=404, detail="Alert not found")
+    db_alert.status = "Open"
+    db.commit()
+    db.refresh(db_alert)
+    return db_alert
+
+@app.put("/alerts/{alert_id}/status", response_model=AlertResponse)
+def update_alert_status(alert_id: int, status_update: AlertStatusUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    db_alert = db.query(Alert).filter(Alert.id == alert_id).first()
+    if not db_alert:
+        raise HTTPException(status_code=404, detail="Alert not found")
+    db_alert.status = status_update.status
+    db.commit()
+    db.refresh(db_alert)
+    return db_alert
+
 
 from fastapi.staticfiles import StaticFiles
 app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")

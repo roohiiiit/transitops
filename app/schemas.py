@@ -4,7 +4,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 # --- User ---
 class UserBase(BaseModel):
-    email: str = Field(..., pattern=r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$")
+    email: str
 
 class UserCreate(UserBase):
     password: str
@@ -46,6 +46,7 @@ class VehicleResponse(VehicleBase):
 
 # --- Driver ---
 class DriverBase(BaseModel):
+    email: Optional[str] = None
     name: str
     licenseNumber: str
     licenseCategory: str
@@ -138,3 +139,22 @@ class ExpenseResponse(ExpenseBase):
     id: int
 
     model_config = ConfigDict(from_attributes=True)
+
+# --- Alert ---
+class AlertBase(BaseModel):
+    driverId: int
+    vehicleId: int
+    message: str
+    status: Optional[str] = "Open"
+
+class AlertCreate(AlertBase):
+    pass
+
+class AlertResponse(AlertBase):
+    id: int
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+class AlertStatusUpdate(BaseModel):
+    status: str

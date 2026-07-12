@@ -9,7 +9,7 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
-    role = Column(String, nullable=False, default="Fleet Manager") # Fleet Manager, Driver, Safety Officer, Financial Analyst
+    role = Column(String, nullable=False, default="Fleet Manager") # Fleet Manager, Driver, Safety Officer, Financial Officer
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
@@ -29,6 +29,7 @@ class Driver(Base):
     __tablename__ = "drivers"
 
     id = Column(Integer, primary_key=True, index=True)
+    email = Column(String, unique=True, index=True, nullable=True)
     name = Column(String, nullable=False)
     licenseNumber = Column(String, unique=True, index=True, nullable=False)
     licenseCategory = Column(String, nullable=False)
@@ -82,3 +83,13 @@ class Expense(Base):
     type = Column(String, nullable=False) # Toll, Insurance, Permit, Parking, Other
     date = Column(String, nullable=False) # YYYY-MM-DD
     cost = Column(Float, nullable=False)
+
+class Alert(Base):
+    __tablename__ = "alerts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    driverId = Column(Integer, ForeignKey("drivers.id"), nullable=False)
+    vehicleId = Column(Integer, ForeignKey("vehicles.id"), nullable=False)
+    message = Column(String, nullable=False)
+    status = Column(String, nullable=False, default="Open") # Open, Resolved
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
