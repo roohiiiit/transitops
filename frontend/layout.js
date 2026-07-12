@@ -77,7 +77,6 @@
     { id: 'maintenance', label: 'Maintenance',      icon: ICONS.maintenance },
     { id: 'fuel',        label: 'Fuel & Expense',   icon: ICONS.fuel },
     { id: 'reports',     label: 'Reports',          icon: ICONS.reports },
-    { id: 'preview',     label: 'Table Preview',    icon: ICONS.search },
   ];
 
   const PAGE_TITLES = {
@@ -89,7 +88,6 @@
     maintenance: 'Maintenance',
     fuel:        'Fuel & Expense',
     reports:     'Reports & Analytics',
-    preview:     'Database Table Preview',
   };
 
   // ── Role-Based Access ──
@@ -97,10 +95,10 @@
   // Real access control and authorization MUST be enforced server-side on every API call.
   // Never trust the client's role state to grant access to sensitive endpoints.
   const ROLE_PERMISSIONS = {
-    'Fleet Manager':     ['Dashboard', 'Vehicles', 'Drivers', 'Trips', 'Create Trip', 'Maintenance', 'Fuel & Expense', 'Reports', 'Table Preview'],
+    'Fleet Manager':     ['Dashboard', 'Vehicles', 'Drivers', 'Trips', 'Create Trip', 'Maintenance', 'Fuel & Expense', 'Reports'],
     'Driver':            ['Dashboard', 'Trips'],
     'Safety Officer':    ['Dashboard', 'Drivers', 'Trips', 'Create Trip'],
-    'Financial Analyst': ['Dashboard', 'Vehicles', 'Fuel & Expense', 'Reports', 'Table Preview'],
+    'Financial Analyst': ['Dashboard', 'Vehicles', 'Fuel & Expense', 'Reports'],
   };
 
   const ALL_ROLES = Object.keys(ROLE_PERMISSIONS);
