@@ -12,6 +12,15 @@ TransitOps is a modern, comprehensive dashboard and fleet management solution de
 - 🛠️ **Maintenance & Fuel Logs:** Keep detailed records of preventative maintenance, repairs, and fuel consumption to optimize running costs.
 - 💵 **Expense Tracking:** Granular logging of fleet expenses to maintain financial visibility.
 
+## 🔐 Role-Based Access Control (RBAC)
+
+TransitOps enforces strict role-based access to ensure data integrity and organizational security. The system supports distinct user roles:
+
+- 🏢 **Fleet Manager:** Has full administrative access. Can create/dispatch trips, manage the vehicle inventory, and oversee all operations.
+- 🚚 **Driver / Driver Manager:** Restricted view focusing on their own assigned trips, shift statuses, and safety metrics.
+- 🛡️ **Safety Officer:** Focuses on compliance, driver safety scores, license expirations, and managing/resolving critical alerts.
+- 💰 **Financial Officer:** Focused purely on cost analysis, fuel logs, acquisition costs, and maintenance expenses without the clutter of operational dispatch tools.
+
 ## 🚀 Running Locally
 
 This project requires **Python 3.10+**. Follow the steps below to spin up the local server and start testing TransitOps.
