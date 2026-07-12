@@ -1,99 +1,59 @@
-# TransitOps
+# 🚛 TransitOps - Fleet & Transit Management System
 
-TransitOps is a modern, lightweight, full-stack web application designed for comprehensive transit and fleet management. It provides a centralized dashboard to track and manage vehicles, drivers, trips, fuel consumption, and operational expenses in real-time.
+TransitOps is a modern, comprehensive dashboard and fleet management solution designed to streamline the operations of logistics and transit organizations. Built with a robust Python/FastAPI backend and an interactive JavaScript frontend, TransitOps ensures complete control over vehicles, drivers, trips, maintenance, and fuel tracking.
 
-## Features
+## ✨ Features
 
-- **Dashboard**: High-level, real-time overview of fleet operations.
-- **Drivers Management**: Track driver records, licenses, safety scores, and assignments.
-- **Vehicles Management**: Track fleet vehicles, load capacities, odometers, and maintenance status.
-- **Trips Management**: Log and monitor live trips with GPS status toggles.
-- **Fuel & Expense Tracking**: Record fuel expenses and operational costs. Includes an **AI Bill Scanning** feature (powered by Google Gemini) to automatically extract receipts and classify expenses via OCR.
-- **Maintenance Logs**: Log vehicle maintenance, repairs, and associated costs.
-- **Role-Based Access Control**: Strict backend-enforced RBAC distinguishing capabilities between Fleet Managers, Safety Officers, Drivers, and Financial Analysts.
-- **Security**: Hardened JWT authentication, bcrypt password hashing, and XSS-sanitized frontend rendering.
+- 🌓 **Dynamic Light/Dark Mode:** Seamlessly switch between light and dark modes with a sleek UI toggle for optimal viewing in any environment.
+- 📊 **Real-time KPI Dashboard:** A comprehensive dashboard tracking Active Vehicles, Fleet Utilization, Drivers on Duty, Active/Pending Trips, and Vehicles in Maintenance.
+- 🚚 **Vehicle & Fleet Tracking:** Complete CRUD for fleet vehicles including types, zones/regions, statuses, odometer readings, and payload capacities.
+- 👤 **Driver Management:** Track driver licenses, statuses, assignments, and safety scores. Includes mock automated license expiration email reminders.
+- 🗺️ **Trip Scheduling:** Dispatch and monitor trips with integrated driver and vehicle assignments. Follows strict dispatch rules (e.g., vehicles in maintenance cannot be dispatched).
+- 🛠️ **Maintenance & Fuel Logs:** Keep detailed records of preventative maintenance, repairs, and fuel consumption to optimize running costs.
+- 💵 **Expense Tracking:** Granular logging of fleet expenses to maintain financial visibility.
 
-## Tech Stack
+## 🚀 Running Locally
 
-### Frontend
-- Pure Vanilla JavaScript (Modular ES6 Structure)
-- HTML5 & CSS3 with CSS variables for dynamic themes
-- Zero heavy framework dependencies, ensuring maximum speed and lightweight client bundles.
+This project requires **Python 3.10+**. Follow the steps below to spin up the local server and start testing TransitOps.
 
-### Backend
-- **Python / FastAPI**: High-performance, asynchronous REST API.
-- **SQLAlchemy & SQLite**: ORM for robust database interactions (designed to be easily portable to PostgreSQL).
-- **Uvicorn**: Lightning-fast ASGI web server.
-- **PyJWT & bcrypt**: Secure user authentication.
-- **Google GenAI SDK**: Intelligent OCR and data extraction for receipts and bills using Gemini 3.5 Flash.
-
-## Project Structure
-
-```
-├── app/                  # FastAPI backend logic (routes, models, schemas)
-├── frontend/             # Static frontend assets (HTML, CSS, JS)
-│   ├── app.js            # Frontend router and lifecycle manager
-│   ├── dataLayer.js      # Global state sync with backend API
-│   ├── layout.js         # Core UI layout and global sanitizer
-│   └── index.html        # Entrypoint
-├── run.py                # Backend server entrypoint
-├── requirements.txt      # Python dependencies
-└── .env.example          # Template for required environment variables
-```
-
-## Getting Started Locally
-
-No deployment link is provided for this repository—you must run it locally or deploy it to your own infrastructure.
-
-### Prerequisites
-
-- Python 3.10+
-- A valid Google Gemini API Key for the AI bill scanning feature.
-
-### 1. Environment Setup
-
-Copy the example environment file and configure it:
+### 1. Clone the repository
 ```bash
-cp .env.example .env
+git clone https://github.com/roohiiiit/transitops.git
+cd transitops
 ```
-Open `.env` and add your `GEMINI_API_KEY`. (If you leave it blank, the backend will still run, but the AI receipt scanner will be disabled).
 
-### 2. Backend Setup
-
-It is highly recommended to use a virtual environment:
+### 2. Set up a virtual environment
 ```bash
-# Create and activate virtual environment
 python3 -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+source venv/bin/activate
+# On Windows use: venv\Scripts\activate
+```
 
-# Install dependencies
+### 3. Install dependencies
+```bash
 pip install -r requirements.txt
+```
 
-# Start the FastAPI server (this will auto-create and seed the SQLite database)
+### 4. Configure Environment Variables
+Create a `.env` file in the root directory and add the following keys:
+```env
+SECRET_KEY="supersecrettransitopskey"
+ALGORITHM="HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES=1440
+```
+
+### 5. Start the Application
+Run the FastAPI backend (which simultaneously serves the frontend via static files):
+```bash
 python run.py
 ```
-The backend API will now be running on `http://127.0.0.1:8000`.
 
-### 3. Frontend Setup
-
-The frontend consists of entirely static files and runs directly in the browser. 
-
-In a **new terminal tab**, start a simple HTTP server in the root of the project to serve the files:
-```bash
-# Start frontend server
-python3 -m http.server 8080
-```
-
-### 4. Access the App
-
+### 6. Access the App
 Open your browser and navigate to:
-**http://localhost:8080/frontend/**
+**http://localhost:8080**
 
-**Default Seeded Credentials for Accessing Manager Account:**
-- **Email:** `manager@transitops.local`
-- **Password:** `password123`
-*(This user is a Fleet Manager and has full access to all features).*
+*Note: Since it uses a local SQLite DB (`auth.db`), you will be greeted by the login screen. You can register a new account instantly via the "Sign Up" toggle on the login page to gain full Fleet Manager access.*
 
-**Default Seeded Credentials for Accessing Manager Account:**
-- **Email:** `driver@transitops.local`
-- **Password:** `password123`
+---
+
+*Built with ❤️ for the Hackathon!*
