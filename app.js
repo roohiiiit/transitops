@@ -9,8 +9,6 @@
   let currentPage = null;
 
   // ── Page Renderers Registry ──
-  // Each page module can call TransitOps.registerPage(id, renderFn)
-  // renderFn should return an HTML string OR directly manipulate the DOM.
   const pageRenderers = {};
 
   // Default placeholder renderer
@@ -31,7 +29,7 @@
   }
 
   // ── Navigation ──
-  function navigate(pageId) {
+  async function navigate(pageId) {
     // Auth guard - if no token, do not use the router or shell, just show login
     if (!localStorage.getItem('transitops_token')) {
       if (window.TransitOps && window.TransitOps.showLogin) {
@@ -45,11 +43,13 @@
     currentPage = pageId;
     Layout.setActivePage(pageId);
 
+    // Sync all data from backend whenever navigating to keep data fresh across views
+    await DataLayer.syncFromBackend();
+
     // Use registered renderer or fallback to placeholder
     const renderer = pageRenderers[pageId];
     if (renderer) {
       const result = renderer();
-      // If renderer returns a string, inject it. Otherwise assume it manipulated DOM directly.
       if (typeof result === 'string') {
         Layout.setPageContent(result);
       }
@@ -61,7 +61,6 @@
   // ── Register Page ──
   function registerPage(pageId, renderFn) {
     pageRenderers[pageId] = renderFn;
-    // If we're already on this page, re-render with the real renderer
     if (currentPage === pageId) {
       const result = renderFn();
       if (typeof result === 'string') {
@@ -71,12 +70,13 @@
   }
 
   // ── Initialise ──
-  document.addEventListener('DOMContentLoaded', () => {
+  document.addEventListener('DOMContentLoaded', async () => {
     if (!localStorage.getItem('transitops_token')) {
       if (window.TransitOps && window.TransitOps.showLogin) {
         window.TransitOps.showLogin();
       }
     } else {
+      await DataLayer.syncFromBackend();
       Layout.create();
       navigate('dashboard');
     }

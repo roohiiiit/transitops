@@ -8,7 +8,6 @@
   const API_URL = 'http://localhost:8000';
 
   function renderLoginPage() {
-    // Reset any lingering classes and overwrite body completely
     document.body.className = '';
     
     const html = `
@@ -23,7 +22,6 @@
                 </pattern>
               </defs>
               <rect width="100%" height="100%" fill="url(#route-grid)" />
-              <!-- Diagonal static route line -->
               <path d="M -100 800 L 300 400 L 700 600 L 1200 100" fill="none" stroke="var(--accent)" stroke-width="2" stroke-dasharray="8 8" opacity="0.3"/>
               <circle cx="300" cy="400" r="6" fill="var(--bg-base)" stroke="var(--accent)" stroke-width="2" opacity="0.5"/>
               <circle cx="700" cy="600" r="6" fill="var(--bg-base)" stroke="var(--accent)" stroke-width="2" opacity="0.5"/>
@@ -68,7 +66,6 @@
 
     document.body.innerHTML = html;
 
-    // Bind form submission
     document.getElementById('login-form').addEventListener('submit', handleLogin);
   }
 
@@ -92,9 +89,8 @@
     btn.disabled = true;
 
     try {
-      // 1. Get Token
       const params = new URLSearchParams();
-      params.append('username', email); // backend expects 'username'
+      params.append('username', email);
       params.append('password', password);
 
       const tokenRes = await fetch(`${API_URL}/auth/token`, {
@@ -110,10 +106,8 @@
       const tokenData = await tokenRes.json();
       const token = tokenData.access_token;
       
-      // Store token
       localStorage.setItem('transitops_token', token);
 
-      // 2. Fetch User Profile
       const userRes = await fetch(`${API_URL}/users/me`, {
         method: 'GET',
         headers: { 'Authorization': `Bearer ${token}` }
@@ -124,12 +118,12 @@
       }
 
       const userData = await userRes.json();
-
-      // 3. Set Role (fallback to Fleet Manager if backend doesn't provide it yet)
       const role = userData.role || 'Fleet Manager';
       DataLayer.setCurrentRole(role);
 
-      // 4. Initialize shell and navigate to dashboard
+      // Sync backend state arrays to local memory before starting UI
+      await DataLayer.syncFromBackend();
+
       Layout.create();
       window.TransitOps.navigate('dashboard');
 
@@ -140,7 +134,6 @@
     }
   }
 
-  // ── Register global function ──
   window.TransitOps = window.TransitOps || {};
   window.TransitOps.showLogin = renderLoginPage;
 

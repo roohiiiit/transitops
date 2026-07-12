@@ -65,6 +65,7 @@
     { id: 'maintenance', label: 'Maintenance',      icon: ICONS.maintenance },
     { id: 'fuel',        label: 'Fuel & Expense',   icon: ICONS.fuel },
     { id: 'reports',     label: 'Reports',          icon: ICONS.reports },
+    { id: 'preview',     label: 'Table Preview',    icon: ICONS.search },
   ];
 
   const PAGE_TITLES = {
@@ -75,14 +76,15 @@
     maintenance: 'Maintenance',
     fuel:        'Fuel & Expense',
     reports:     'Reports & Analytics',
+    preview:     'Database Table Preview',
   };
 
   // ── Role-Based Access ──
   const ROLE_PERMISSIONS = {
-    'Fleet Manager':     ['Dashboard', 'Vehicles', 'Drivers', 'Trips', 'Maintenance', 'Fuel & Expense', 'Reports'],
+    'Fleet Manager':     ['Dashboard', 'Vehicles', 'Drivers', 'Trips', 'Maintenance', 'Fuel & Expense', 'Reports', 'Table Preview'],
     'Driver':            ['Dashboard', 'Trips'],
     'Safety Officer':    ['Dashboard', 'Drivers', 'Trips'],
-    'Financial Analyst': ['Dashboard', 'Vehicles', 'Fuel & Expense', 'Reports'],
+    'Financial Analyst': ['Dashboard', 'Vehicles', 'Fuel & Expense', 'Reports', 'Table Preview'],
   };
 
   const ALL_ROLES = Object.keys(ROLE_PERMISSIONS);

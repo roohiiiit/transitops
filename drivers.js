@@ -425,6 +425,10 @@
                 `).join('')}
               </div>
             </div>
+            <hr class="drawer-divider">
+            <div class="detail-section">
+              <button class="btn btn--ghost" id="btn-delete-driver" style="width: 100%; border-color: #ff4d4f; color: #ff4d4f;">Delete Driver</button>
+            </div>
           </div>
         </aside>
       </div>
@@ -442,12 +446,31 @@
     });
 
     overlay.querySelectorAll('[data-status]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        DataLayer.updateDriverStatus(driverId, btn.dataset.status);
-        closeDrawer();
-        refreshContent();
+      btn.addEventListener('click', async () => {
+        try {
+          await DataLayer.updateDriverStatus(driverId, btn.dataset.status);
+          closeDrawer();
+          refreshContent();
+        } catch (err) {
+          alert(err.message || 'Failed to update driver status');
+        }
       });
     });
+
+    const deleteBtn = document.getElementById('btn-delete-driver');
+    if (deleteBtn) {
+      deleteBtn.addEventListener('click', async () => {
+        if (confirm('Are you sure you want to delete this driver?')) {
+          try {
+            await DataLayer.deleteDriver(driverId);
+            closeDrawer();
+            refreshContent();
+          } catch (err) {
+            alert(err.message || 'Failed to delete driver');
+          }
+        }
+      });
+    }
   }
 
   function closeDrawer() {

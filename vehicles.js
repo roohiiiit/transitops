@@ -307,7 +307,7 @@
     return true;
   }
 
-  function handleAddVehicle(e) {
+  async function handleAddVehicle(e) {
     e.preventDefault();
 
     const regValid = validateRegNumber();
@@ -317,18 +317,21 @@
 
     if (!regValid || !loadValid || !odoValid || !costValid) return;
 
-    DataLayer.addVehicle({
-      regNumber: document.getElementById('v-reg').value.trim(),
-      name: document.getElementById('v-name').value.trim(),
-      type: document.getElementById('v-type').value,
-      maxLoadKg: Number(document.getElementById('v-load').value),
-      odometer: Number(document.getElementById('v-odo').value),
-      acquisitionCost: Number(document.getElementById('v-cost').value),
-      status: document.getElementById('v-status').value,
-    });
-
-    closeModal();
-    refreshContent();
+    try {
+      await DataLayer.addVehicle({
+        regNumber: document.getElementById('v-reg').value.trim(),
+        name: document.getElementById('v-name').value.trim(),
+        type: document.getElementById('v-type').value,
+        maxLoadKg: Number(document.getElementById('v-load').value),
+        odometer: Number(document.getElementById('v-odo').value),
+        acquisitionCost: Number(document.getElementById('v-cost').value),
+        status: document.getElementById('v-status').value,
+      });
+      closeModal();
+      refreshContent();
+    } catch (err) {
+      alert(err.message || 'Failed to add vehicle');
+    }
   }
 
   function closeModal() {
@@ -398,6 +401,10 @@
                 `).join('')}
               </div>
             </div>
+            <hr class="drawer-divider">
+            <div class="detail-section">
+              <button class="btn btn--ghost" id="btn-delete-vehicle" style="width: 100%; border-color: #ff4d4f; color: #ff4d4f;">Delete Vehicle</button>
+            </div>
           </div>
         </aside>
       </div>
@@ -415,12 +422,31 @@
     });
 
     overlay.querySelectorAll('[data-status]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        DataLayer.updateVehicleStatus(vehicleId, btn.dataset.status);
-        closeDrawer();
-        refreshContent();
+      btn.addEventListener('click', async () => {
+        try {
+          await DataLayer.updateVehicleStatus(vehicleId, btn.dataset.status);
+          closeDrawer();
+          refreshContent();
+        } catch (err) {
+          alert(err.message || 'Failed to update vehicle status');
+        }
       });
     });
+
+    const deleteBtn = document.getElementById('btn-delete-vehicle');
+    if (deleteBtn) {
+      deleteBtn.addEventListener('click', async () => {
+        if (confirm('Are you sure you want to delete this vehicle?')) {
+          try {
+            await DataLayer.deleteVehicle(vehicleId);
+            closeDrawer();
+            refreshContent();
+          } catch (err) {
+            alert(err.message || 'Failed to delete vehicle');
+          }
+        }
+      });
+    }
   }
 
   function closeDrawer() {
