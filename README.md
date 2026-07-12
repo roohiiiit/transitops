@@ -6,10 +6,13 @@ TransitOps is a modern, comprehensive dashboard and fleet management solution de
 
 - 🌓 **Dynamic Light/Dark Mode:** Seamlessly switch between light and dark modes with a sleek UI toggle for optimal viewing in any environment.
 - 📊 **Real-time KPI Dashboard:** A comprehensive dashboard tracking Active Vehicles, Fleet Utilization, Drivers on Duty, Active/Pending Trips, and Vehicles in Maintenance.
+- 🤖 **AI-Powered Fuel Receipt Scanning:** Uses Google Gemini AI vision to automatically extract liters, cost, and date from uploaded fuel receipt images.
 - 🚚 **Vehicle & Fleet Tracking:** Complete CRUD for fleet vehicles including types, zones/regions, statuses, odometer readings, and payload capacities.
 - 👤 **Driver Management:** Track driver licenses, statuses, assignments, and safety scores. Includes mock automated license expiration email reminders.
 - 🗺️ **Trip Scheduling:** Dispatch and monitor trips with integrated driver and vehicle assignments. Follows strict dispatch rules (e.g., vehicles in maintenance cannot be dispatched).
 - 🛠️ **Maintenance & Fuel Logs:** Keep detailed records of preventative maintenance, repairs, and fuel consumption to optimize running costs.
+- 📄 **PDF Report Generation:** One-click generation of formatted PDF reports for inventory, KPIs, drivers, and trips.
+- 🚨 **Alerts & Incidents:** Dedicated incident tracking for safety officers to log and resolve alerts like accidents or compliance issues.
 - 💵 **Expense Tracking:** Granular logging of fleet expenses to maintain financial visibility.
 
 ## 🔐 Role-Based Access Control (RBAC)
