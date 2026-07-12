@@ -89,7 +89,11 @@ python3 -m http.server 8080
 Open your browser and navigate to:
 **http://localhost:8080/frontend/**
 
-**Default Seeded Credentials:**
-- **Email:** `admin@transitops.local`
-- **Password:** `admin123`
+**Default Seeded Credentials for Accessing Manager Account:**
+- **Email:** `manager@transitops.local`
+- **Password:** `password123`
 *(This user is a Fleet Manager and has full access to all features).*
+
+**Default Seeded Credentials for Accessing Manager Account:**
+- **Email:** `driver@transitops.local`
+- **Password:** `password123`
