@@ -8,6 +8,8 @@
 (function () {
   'use strict';
 
+  let currentRole = null;
+
   // ────────────────────────────────────────────
   //  MOCK DATA — Vehicles
   // ────────────────────────────────────────────
@@ -316,6 +318,10 @@
   // ════════════════════════════════════════════
 
   window.DataLayer = {
+    // Auth Role
+    getCurrentRole: () => currentRole,
+    setCurrentRole: (role) => { currentRole = role; },
+
     // Vehicles
     getVehicles,
     getVehicleById,

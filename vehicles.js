@@ -1,3 +1,5 @@
+
+
 /* ═══════════════════════════════════════════════════════════
    TransitOps — Vehicle Registry Page
    Filter Cards + Vehicle Grid + Add Modal + Detail Drawer
@@ -9,17 +11,17 @@
   // ── Constants ──
   const STATUS_CLASS = {
     'Available': 'status-pill--available',
-    'On Trip':   'status-pill--ontrip',
-    'In Shop':   'status-pill--shop',
-    'Retired':   'status-pill--retired',
+    'On Trip': 'status-pill--ontrip',
+    'In Shop': 'status-pill--shop',
+    'Retired': 'status-pill--retired',
   };
 
   const FILTER_CATEGORIES = [
-    { key: 'all',       label: 'All Vehicles', color: 'var(--accent)' },
-    { key: 'Available', label: 'Available',    color: 'var(--status-available)' },
-    { key: 'On Trip',   label: 'On Trip',      color: 'var(--status-ontrip)' },
-    { key: 'In Shop',   label: 'In Shop',      color: 'var(--status-shop)' },
-    { key: 'Retired',   label: 'Retired',      color: 'var(--status-retired)' },
+    { key: 'all', label: 'All Vehicles', color: 'var(--accent)' },
+    { key: 'Available', label: 'Available', color: 'var(--status-available)' },
+    { key: 'On Trip', label: 'On Trip', color: 'var(--status-ontrip)' },
+    { key: 'In Shop', label: 'In Shop', color: 'var(--status-shop)' },
+    { key: 'Retired', label: 'Retired', color: 'var(--status-retired)' },
   ];
 
   const VEHICLE_TYPES = ['Mini Truck', 'LCV', 'Medium Truck', 'Heavy Truck', 'Pickup', 'Van', 'Trailer'];
@@ -93,9 +95,9 @@
     return `
       <div class="vr-filter-row" id="vr-filter-row">
         ${FILTER_CATEGORIES.map(cat => {
-          const count = counts[cat.key] || 0;
-          const isActive = activeFilter === cat.key;
-          return `
+      const count = counts[cat.key] || 0;
+      const isActive = activeFilter === cat.key;
+      return `
             <button class="vr-filter-card${isActive ? ' vr-filter-card--active' : ''}"
                     data-filter="${cat.key}"
                     style="--card-accent: ${cat.color}">
@@ -103,7 +105,7 @@
               <div class="vr-filter-label">${cat.label}</div>
             </button>
           `;
-        }).join('')}
+    }).join('')}
       </div>
     `;
   }
@@ -124,10 +126,10 @@
     return `
       <div class="vr-grid" id="vr-grid">
         ${vehicles.map(v => {
-          const dimmed = (v.status === 'Retired' || v.status === 'In Shop') ? ' vr-card--dimmed' : '';
-          const pillClass = STATUS_CLASS[v.status] || '';
+      const dimmed = (v.status === 'Retired' || v.status === 'In Shop') ? ' vr-card--dimmed' : '';
+      const pillClass = STATUS_CLASS[v.status] || '';
 
-          return `
+      return `
             <div class="vr-card${dimmed}" data-id="${v.id}">
               <div class="vr-card-top">
                 <span class="vr-card-icon">${getTypeIcon(v.type)}</span>
@@ -152,7 +154,7 @@
               </div>
             </div>
           `;
-        }).join('')}
+    }).join('')}
       </div>
     `;
   }
@@ -308,21 +310,21 @@
   function handleAddVehicle(e) {
     e.preventDefault();
 
-    const regValid  = validateRegNumber();
+    const regValid = validateRegNumber();
     const loadValid = validateNumeric('v-load', 'v-load-error');
-    const odoValid  = validateNumeric('v-odo', 'v-odo-error');
+    const odoValid = validateNumeric('v-odo', 'v-odo-error');
     const costValid = validateNumeric('v-cost', 'v-cost-error');
 
     if (!regValid || !loadValid || !odoValid || !costValid) return;
 
     DataLayer.addVehicle({
-      regNumber:       document.getElementById('v-reg').value.trim(),
-      name:            document.getElementById('v-name').value.trim(),
-      type:            document.getElementById('v-type').value,
-      maxLoadKg:       Number(document.getElementById('v-load').value),
-      odometer:        Number(document.getElementById('v-odo').value),
+      regNumber: document.getElementById('v-reg').value.trim(),
+      name: document.getElementById('v-name').value.trim(),
+      type: document.getElementById('v-type').value,
+      maxLoadKg: Number(document.getElementById('v-load').value),
+      odometer: Number(document.getElementById('v-odo').value),
       acquisitionCost: Number(document.getElementById('v-cost').value),
-      status:          document.getElementById('v-status').value,
+      status: document.getElementById('v-status').value,
     });
 
     closeModal();

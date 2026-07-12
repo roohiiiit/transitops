@@ -18,10 +18,21 @@ from app.security import (
 # Automatically create database tables (SQLite)
 Base.metadata.create_all(bind=engine)
 
+from fastapi.middleware.cors import CORSMiddleware
+
 app = FastAPI(
     title="Custom Authentication Service",
     description="A secure SQLite/FastAPI authentication backend coded from scratch",
     version="1.0.0"
+)
+
+# Allow CORS for frontend integration
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/token")

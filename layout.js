@@ -86,7 +86,6 @@
   };
 
   const ALL_ROLES = Object.keys(ROLE_PERMISSIONS);
-  let currentRole = 'Fleet Manager';
 
   // ── Get nav items for current role ──
   function getNavItemsForRole(role) {
@@ -99,7 +98,8 @@
     const navEl = document.getElementById('sidebar-nav');
     if (!navEl) return;
 
-    const items = getNavItemsForRole(currentRole);
+    const role = DataLayer.getCurrentRole() || 'Fleet Manager';
+    const items = getNavItemsForRole(role);
     navEl.innerHTML = items.map(item => `
       <a class="nav-item" data-page="${item.id}" id="nav-${item.id}">
         <span class="nav-icon">${svg(item.icon)}</span>
@@ -120,14 +120,11 @@
   }
 
   // ── Set role + re-render ──
-  function setRole(role) {
-    if (!ROLE_PERMISSIONS[role]) return;
-    currentRole = role;
-
-    // Update the role-switcher dropdown value
-    const select = document.getElementById('role-switcher');
-    if (select) select.value = role;
-
+  function updateRoleDisplay() {
+    const role = DataLayer.getCurrentRole() || 'Fleet Manager';
+    const display = document.getElementById('role-display');
+    if (display) display.textContent = role;
+    
     // Re-render sidebar
     renderNav();
 
@@ -146,10 +143,7 @@
 
   // ── Build Layout Shell ──
   function createLayout() {
-    // Role-switcher dropdown options
-    const roleOptions = ALL_ROLES.map(role =>
-      `<option value="${role}"${role === currentRole ? ' selected' : ''}>${role}</option>`
-    ).join('');
+    const role = DataLayer.getCurrentRole() || 'Fleet Manager';
 
     document.body.innerHTML = `
       <!-- ═══ SIDEBAR ═══ -->
@@ -181,11 +175,9 @@
             <input type="text" class="search-input" placeholder="Search fleet..." id="global-search">
             <span class="search-icon">${svg(ICONS.search, 15)}</span>
           </div>
-          <div class="role-switcher-wrapper">
+          <div class="role-switcher-wrapper" style="pointer-events: none;">
             <span class="role-dot"></span>
-            <select id="role-switcher" class="role-switcher">
-              ${roleOptions}
-            </select>
+            <span id="role-display" style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin-left: 8px;">${role}</span>
           </div>
         </div>
       </header>
@@ -198,11 +190,6 @@
 
     // Render initial nav for current role
     renderNav();
-
-    // Bind role-switcher change
-    document.getElementById('role-switcher').addEventListener('change', (e) => {
-      setRole(e.target.value);
-    });
   }
 
   // ── Update Active Page ──
@@ -252,19 +239,11 @@
 
   // ── Public API ──
   window.Layout = {
-    create:            createLayout,
-    setActivePage:     setActivePage,
-    setPageContent:    setPageContent,
-    getContentElement: getContentElement,
-    setShellVisible:   setShellVisible,
-    setRole:           setRole,
-    getRole:           () => currentRole,
-    getNavItemsForRole: getNavItemsForRole,
-    NAV_ITEMS:         NAV_ITEMS,
-    PAGE_TITLES:       PAGE_TITLES,
-    ROLE_PERMISSIONS:  ROLE_PERMISSIONS,
-    svg:               svg,
-    ICONS:             ICONS,
+    create:          createLayout,
+    setActivePage:   setActivePage,
+    setPageContent:  setPageContent,
+    PAGE_TITLES:     PAGE_TITLES,
+    updateRoleDisplay: updateRoleDisplay,
   };
 
 })();

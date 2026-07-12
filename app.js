@@ -32,6 +32,14 @@
 
   // ── Navigation ──
   function navigate(pageId) {
+    // Auth guard - if no token, do not use the router or shell, just show login
+    if (!localStorage.getItem('transitops_token')) {
+      if (window.TransitOps && window.TransitOps.showLogin) {
+        window.TransitOps.showLogin();
+      }
+      return;
+    }
+
     if (pageId === currentPage) return;
 
     currentPage = pageId;
@@ -64,15 +72,22 @@
 
   // ── Initialise ──
   document.addEventListener('DOMContentLoaded', () => {
-    Layout.create();
-    navigate('dashboard');
+    if (!localStorage.getItem('transitops_token')) {
+      if (window.TransitOps && window.TransitOps.showLogin) {
+        window.TransitOps.showLogin();
+      }
+    } else {
+      Layout.create();
+      navigate('dashboard');
+    }
   });
 
   // ── Public API ──
-  window.TransitOps = {
+  window.TransitOps = window.TransitOps || {};
+  Object.assign(window.TransitOps, {
     navigate:     navigate,
     registerPage: registerPage,
     currentPage:  () => currentPage,
-  };
+  });
 
 })();
