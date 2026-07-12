@@ -52,6 +52,7 @@ class Trip(Base):
     fuelConsumed = Column(Float, nullable=True)
     current_lat = Column(Float, nullable=True)
     current_lon = Column(Float, nullable=True)
+    gps_broadcasting = Column(Boolean, default=False, nullable=False)
 
 class MaintenanceLog(Base):
     __tablename__ = "maintenance_logs"

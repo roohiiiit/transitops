@@ -13,7 +13,7 @@ from app.schemas import (
     UserCreate, UserResponse, Token, TokenData,
     VehicleCreate, VehicleResponse,
     DriverCreate, DriverResponse,
-    TripCreate, TripResponse, TripLocationUpdate,
+    TripCreate, TripResponse, TripLocationUpdate, TripGpsStatusUpdate,
     MaintenanceLogCreate, MaintenanceLogResponse,
     FuelLogCreate, FuelLogResponse,
     ExpenseCreate, ExpenseResponse
@@ -573,5 +573,24 @@ def create_expense(expense: ExpenseCreate, db: Session = Depends(get_db), curren
     return db_log
 
 
+
+@app.put("/trips/{id}/gps-status", tags=["Trips"])
+def update_gps_status(
+    id: int,
+    payload: TripGpsStatusUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    db_trip = db.query(Trip).filter(Trip.id == id).first()
+    if not db_trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    db_trip.gps_broadcasting = payload.active
+    db.commit()
+    db.refresh(db_trip)
+    return {"id": id, "gps_broadcasting": db_trip.gps_broadcasting}
+
 from fastapi.staticfiles import StaticFiles
 app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
+
+
+

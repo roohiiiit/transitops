@@ -75,6 +75,10 @@ class TripBase(BaseModel):
     fuelConsumed: Optional[float] = None
     current_lat: Optional[float] = None
     current_lon: Optional[float] = None
+    gps_broadcasting: Optional[bool] = False
+
+class TripGpsStatusUpdate(BaseModel):
+    active: bool
 
 class TripLocationUpdate(BaseModel):
     lat: float
