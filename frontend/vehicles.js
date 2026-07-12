@@ -98,10 +98,10 @@
       const count = counts[cat.key] || 0;
       const isActive = activeFilter === cat.key;
       return `
-            <button class="vr-filter-card${isActive ? ' vr-filter-card--active' : ''}"
+            <button class="vr-filter-card${isActive ? ' vr-filter-card--active' : ''} stagger-card"
                     data-filter="${cat.key}"
                     style="--card-accent: ${cat.color}">
-              <div class="vr-filter-count font-display">${count}</div>
+              <div class="vr-filter-count font-display animate-number" data-metric-id="vr-cat-${cat.key}" data-value="${count}">${count}</div>
               <div class="vr-filter-label">${cat.label}</div>
             </button>
           `;
@@ -116,7 +116,7 @@
 
     if (vehicles.length === 0) {
       return `
-        <div class="vr-empty-state">
+        <div class="vr-empty-state empty-state">
           <div class="vr-empty-icon">${getTypeIcon('LCV')}</div>
           <div class="vr-empty-text">No vehicles in this category</div>
         </div>
@@ -128,12 +128,19 @@
         ${vehicles.map(v => {
       const dimmed = (v.status === 'Retired' || v.status === 'In Shop') ? ' vr-card--dimmed' : '';
       const pillClass = STATUS_CLASS[v.status] || '';
+      
+      let flashClass = '';
+      if (window.DataLayer && window.DataLayer.getPreviousMetric) {
+        const lastStatus = window.DataLayer.getPreviousMetric(`vr-status-${v.id}`);
+        if (lastStatus && lastStatus !== v.status) flashClass = ' flash-pill';
+        window.DataLayer.setPreviousMetric(`vr-status-${v.id}`, v.status);
+      }
 
       return `
-            <div class="vr-card${dimmed}" data-id="${v.id}">
+            <div class="vr-card${dimmed} stagger-card" data-id="${v.id}">
               <div class="vr-card-top">
                 <span class="vr-card-icon">${getTypeIcon(v.type)}</span>
-                <span class="status-pill ${pillClass}">${v.status}</span>
+                <span class="status-pill ${pillClass}${flashClass}">${v.status}</span>
               </div>
               <div class="vr-card-reg font-mono">${v.regNumber}</div>
               <div class="vr-card-name">${v.name}</div>
@@ -242,7 +249,7 @@
             </div>
             <div class="modal-footer">
               <button type="button" class="btn btn--ghost" id="modal-cancel-btn">Cancel</button>
-              <button type="submit" class="btn btn--accent">Register Vehicle</button>
+              <button type="submit" class="btn btn--accent" id="btn-submit-vehicle" style="width: 140px;">Register Vehicle</button>
             </div>
           </form>
         </div>
@@ -317,6 +324,11 @@
 
     if (!regValid || !loadValid || !odoValid || !costValid) return;
 
+    const btn = document.getElementById('btn-submit-vehicle');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<span class="spinner"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 2v4"></path></svg></span>';
+    btn.disabled = true;
+
     try {
       await DataLayer.addVehicle({
         regNumber: document.getElementById('v-reg').value.trim(),
@@ -331,14 +343,18 @@
       refreshContent();
     } catch (err) {
       alert(err.message || 'Failed to add vehicle');
+      btn.innerHTML = originalText;
+      btn.disabled = false;
     }
   }
 
   function closeModal() {
     const overlay = document.getElementById('vehicle-modal-overlay');
     if (overlay) {
-      overlay.classList.remove('open');
-      setTimeout(() => overlay.remove(), 200);
+      overlay.classList.add('is-closing');
+      const panel = overlay.querySelector('.modal');
+      if (panel) panel.classList.add('is-closing');
+      setTimeout(() => overlay.remove(), 180);
     }
   }
 
@@ -452,8 +468,10 @@
   function closeDrawer() {
     const overlay = document.getElementById('drawer-overlay');
     if (overlay) {
-      overlay.classList.remove('open');
-      setTimeout(() => overlay.remove(), 200);
+      overlay.classList.add('is-closing');
+      const drawer = document.getElementById('vehicle-drawer');
+      if (drawer) drawer.classList.add('is-closing');
+      setTimeout(() => overlay.remove(), 220);
     }
   }
 
@@ -462,9 +480,12 @@
     const html = `
       <div class="page-toolbar">
         <div class="page-toolbar-left"></div>
-        <button class="btn btn--accent" id="btn-add-vehicle">
-          <span class="btn-icon">+</span> Register Vehicle
-        </button>
+        <div style="display: flex; gap: 12px;">
+          <button class="btn btn--ghost" id="btn-report-vehicles">Generate Report</button>
+          <button class="btn btn--accent" id="btn-add-vehicle">
+            <span class="btn-icon">+</span> Register Vehicle
+          </button>
+        </div>
       </div>
       <div id="vr-content-wrap">
         ${buildFilterCards()}
@@ -472,14 +493,37 @@
       </div>
     `;
 
-    Layout.setPageContent(html);
-    bindFilterClicks();
-    bindCardClicks();
-
-    document.getElementById('btn-add-vehicle').addEventListener('click', openAddModal);
+    return html;
   }
 
   // ── Register with app controller ──
-  TransitOps.registerPage('vehicles', renderVehiclesPage);
+  TransitOps.registerPage('vehicles', () => {
+    setTimeout(() => {
+      bindFilterClicks();
+      bindCardClicks();
+
+      const addBtn = document.getElementById('btn-add-vehicle');
+      if (addBtn) addBtn.addEventListener('click', openAddModal);
+      
+      const reportBtn = document.getElementById('btn-report-vehicles');
+      if (reportBtn) {
+        reportBtn.addEventListener('click', () => {
+          if (window.TransitOps && typeof window.TransitOps.openReportModal === 'function') {
+            window.TransitOps.openReportModal('Vehicles', () => {
+              let data = DataLayer.getVehicles();
+              if (activeFilter !== 'all') {
+                data = data.filter(v => v.status === activeFilter);
+              }
+              return data;
+            });
+          } else {
+            console.error("window.TransitOps.openReportModal is undefined when Generate Report was clicked");
+          }
+        });
+      }
+    }, 200);
+
+    return renderVehiclesPage();
+  });
 
 })();

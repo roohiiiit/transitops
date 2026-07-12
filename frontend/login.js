@@ -5,7 +5,7 @@
 (function () {
   'use strict';
 
-  const API_URL = window.location.origin;
+  const API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? 'http://localhost:8000' : window.location.origin;
 
   function renderLoginPage() {
     document.body.className = '';
@@ -85,7 +85,8 @@
     }
 
     errorDiv.textContent = '';
-    btn.textContent = 'Authenticating...';
+    btn.innerHTML = '<span class="spinner"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 2v4"></path></svg></span>';
+    btn.style.minWidth = '120px'; // Prevent jump
     btn.disabled = true;
 
     try {

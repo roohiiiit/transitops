@@ -216,11 +216,37 @@
     const container = document.getElementById('page-content');
     if (!container) return;
 
-    container.classList.remove('page-enter');
-    container.innerHTML = html;
-    // Force reflow to restart animation
-    void container.offsetWidth;
-    container.classList.add('page-enter');
+    // Fade out current content
+    container.style.opacity = '0';
+    container.style.transition = 'opacity 100ms cubic-bezier(0.4, 0, 0.2, 1)';
+    
+    setTimeout(() => {
+      container.classList.remove('page-enter');
+      container.innerHTML = html;
+      
+      // Trigger stagger and number animations
+      if (window.TransitOpsAnimations) {
+        window.TransitOpsAnimations.initStagger(container);
+        window.TransitOpsAnimations.initNumbers(container);
+      }
+      
+      // Setup slide up start state
+      container.style.transform = 'translateY(8px)';
+      container.style.transition = 'none';
+      void container.offsetWidth; // Force reflow
+      
+      // Fade in and slide up
+      container.style.transition = 'opacity 150ms cubic-bezier(0.4, 0, 0.2, 1), transform 150ms cubic-bezier(0.4, 0, 0.2, 1)';
+      container.style.opacity = '1';
+      container.style.transform = 'translateY(0)';
+      
+      // Clean up inline styles after transition
+      setTimeout(() => {
+        container.style.transform = '';
+        container.style.transition = 'opacity 100ms cubic-bezier(0.4, 0, 0.2, 1)';
+      }, 150);
+
+    }, 100);
   }
 
   // ── Get Content Container (for direct DOM manipulation) ──
@@ -243,6 +269,80 @@
       main.style.height     = visible ? '' : '100vh';
     }
   }
+
+  // ── Animations & Polish Utilities ──
+  window.TransitOpsAnimations = {
+    initStagger: (container) => {
+      const cards = container.querySelectorAll('.stagger-card');
+      cards.forEach((c, i) => {
+        c.style.animation = `cardIn 150ms cubic-bezier(0.4, 0, 0.2, 1) ${i * 40}ms forwards`;
+      });
+    },
+    
+    initNumbers: (container) => {
+      const numberEls = container.querySelectorAll('.animate-number');
+      numberEls.forEach(el => {
+        const id = el.dataset.metricId;
+        const targetVal = parseFloat(el.dataset.value || el.textContent.replace(/[^0-9.-]+/g, ''));
+        const prefix = el.dataset.prefix || '';
+        const suffix = el.dataset.suffix || '';
+        
+        let startVal = 0;
+        if (id && window.DataLayer && window.DataLayer.getPreviousMetric) {
+          startVal = window.DataLayer.getPreviousMetric(id) || 0;
+          window.DataLayer.setPreviousMetric(id, targetVal);
+        }
+
+        if (startVal === targetVal) {
+          el.textContent = prefix + targetVal + suffix;
+          return; 
+        }
+
+        // Animate from startVal to targetVal over 400ms
+        const startTime = performance.now();
+        const duration = 400;
+
+        function update(currentTime) {
+          const elapsed = currentTime - startTime;
+          const progress = Math.min(elapsed / duration, 1);
+          
+          // ease-out
+          const easeProgress = 1 - Math.pow(1 - progress, 3);
+          const currentVal = startVal + (targetVal - startVal) * easeProgress;
+          
+          el.textContent = prefix + Math.round(currentVal) + suffix;
+
+          if (progress < 1) {
+            requestAnimationFrame(update);
+          } else {
+            el.textContent = prefix + targetVal + suffix;
+          }
+        }
+        requestAnimationFrame(update);
+      });
+    },
+
+    showToast: (msg, type = 'success') => {
+      let container = document.getElementById('toast-container');
+      if (!container) {
+        container = document.createElement('div');
+        container.id = 'toast-container';
+        container.className = 'toast-container';
+        document.body.appendChild(container);
+      }
+
+      const toast = document.createElement('div');
+      toast.className = `toast toast--${type}`;
+      toast.textContent = msg;
+      
+      container.appendChild(toast);
+
+      setTimeout(() => {
+        toast.classList.add('is-closing');
+        setTimeout(() => toast.remove(), 200);
+      }, 3000);
+    }
+  };
 
   // ── Public API ──
   window.Layout = {

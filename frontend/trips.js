@@ -235,14 +235,17 @@
     const role = DataLayer.getCurrentRole();
     const canCreate = (role === 'Fleet Manager' || role === 'Safety Officer');
 
-    const html = `
+    return `
       <div class="page-toolbar">
         <div class="page-toolbar-left"></div>
-        ${canCreate ? `
-          <button class="btn btn--accent" id="btn-add-trip">
-            <span class="btn-icon">+</span> Schedule Trip
-          </button>
-        ` : ''}
+        <div style="display: flex; gap: 12px;">
+          <button class="btn btn--ghost" id="btn-report-trips">Generate Report</button>
+          ${canCreate ? `
+            <button class="btn btn--accent" id="btn-add-trip">
+              <span class="btn-icon">+</span> Schedule Trip
+            </button>
+          ` : ''}
+        </div>
       </div>
       <div id="trips-content-wrap">
         ${buildStatsBar()}
@@ -250,16 +253,33 @@
         ${buildTripsTable()}
       </div>
     `;
-
-    Layout.setPageContent(html);
-    bindEvents();
-
-    if (canCreate) {
-      document.getElementById('btn-add-trip').addEventListener('click', openAddModal);
-    }
   }
 
   // --- Register Page ---
-  TransitOps.registerPage('trips', renderTripsPage);
+  TransitOps.registerPage('trips', () => {
+    setTimeout(() => {
+      bindEvents();
+
+      const role = DataLayer.getCurrentRole();
+      const canCreate = (role === 'Fleet Manager' || role === 'Safety Officer');
+      if (canCreate) {
+        const addBtn = document.getElementById('btn-add-trip');
+        if (addBtn) addBtn.addEventListener('click', openAddModal);
+      }
+
+      const reportBtn = document.getElementById('btn-report-trips');
+      if (reportBtn) {
+        reportBtn.addEventListener('click', () => {
+          if (window.TransitOps && typeof window.TransitOps.openReportModal === 'function') {
+            window.TransitOps.openReportModal('Trips', () => getFilteredTrips());
+          } else {
+            console.error("window.TransitOps.openReportModal is undefined when Generate Report was clicked");
+          }
+        });
+      }
+    }, 200);
+
+    return renderTripsPage();
+  });
 
 })();

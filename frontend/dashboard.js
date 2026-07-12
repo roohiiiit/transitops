@@ -60,24 +60,24 @@
   function buildKPICards(metrics) {
     return `
       <div class="dash-kpi-grid">
-        <div class="dash-kpi-card" style="--card-accent: var(--accent);">
-          <div class="dash-kpi-count">${metrics.activeVehicles}</div>
+        <div class="dash-kpi-card stagger-card" style="--card-accent: var(--accent);">
+          <div class="dash-kpi-count animate-number" data-metric-id="dash-active-vehicles" data-value="${metrics.activeVehicles}">${metrics.activeVehicles}</div>
           <div class="dash-kpi-label">Active Vehicles</div>
         </div>
-        <div class="dash-kpi-card click-card" data-target="vehicles" data-filter="Available" style="--card-accent: var(--status-available);">
-          <div class="dash-kpi-count">${metrics.availableVehicles}</div>
+        <div class="dash-kpi-card click-card stagger-card" data-target="vehicles" data-filter="Available" style="--card-accent: var(--status-available);">
+          <div class="dash-kpi-count animate-number" data-metric-id="dash-available-vehicles" data-value="${metrics.availableVehicles}">${metrics.availableVehicles}</div>
           <div class="dash-kpi-label">Available Vehicles</div>
         </div>
-        <div class="dash-kpi-card click-card" data-target="vehicles" data-filter="In Shop" style="--card-accent: var(--status-shop);">
-          <div class="dash-kpi-count">${metrics.inShopVehicles}</div>
+        <div class="dash-kpi-card click-card stagger-card" data-target="vehicles" data-filter="In Shop" style="--card-accent: var(--status-shop);">
+          <div class="dash-kpi-count animate-number" data-metric-id="dash-shop-vehicles" data-value="${metrics.inShopVehicles}">${metrics.inShopVehicles}</div>
           <div class="dash-kpi-label">Vehicles in Maintenance</div>
         </div>
-        <div class="dash-kpi-card click-card" data-target="drivers" data-filter="Available" style="--card-accent: var(--status-available);">
-          <div class="dash-kpi-count">${metrics.activeDrivers}</div>
+        <div class="dash-kpi-card click-card stagger-card" data-target="drivers" data-filter="Available" style="--card-accent: var(--status-available);">
+          <div class="dash-kpi-count animate-number" data-metric-id="dash-active-drivers" data-value="${metrics.activeDrivers}">${metrics.activeDrivers}</div>
           <div class="dash-kpi-label">Active Drivers</div>
         </div>
-        <div class="dash-kpi-card dash-kpi-card--headline" style="--card-accent: var(--accent);">
-          <div class="dash-kpi-count">${metrics.utilization}%</div>
+        <div class="dash-kpi-card dash-kpi-card--headline stagger-card" style="--card-accent: var(--accent);">
+          <div class="dash-kpi-count animate-number" data-metric-id="dash-utilization" data-value="${metrics.utilization}" data-suffix="%">${metrics.utilization}%</div>
           <div class="dash-kpi-label">Fleet Utilization</div>
         </div>
       </div>
@@ -93,7 +93,7 @@
     const strokeDashoffset = circumference - (utilization / 100) * circumference;
 
     return `
-      <div class="dash-panel dash-gauge-panel">
+      <div class="dash-panel dash-gauge-panel stagger-card">
         <h3 class="panel-title">Fleet Utilization</h3>
         <div class="gauge-wrap">
           <svg width="140" height="140" viewBox="0 0 120 120">
@@ -103,7 +103,7 @@
                     stroke-linecap="round" transform="rotate(-90 60 60)" />
           </svg>
           <div class="gauge-center">
-            <span class="gauge-val">${utilization}%</span>
+            <span class="gauge-val animate-number" data-metric-id="dash-gauge" data-value="${utilization}" data-suffix="%">${utilization}%</span>
           </div>
         </div>
       </div>
@@ -131,7 +131,7 @@
     `).join('');
 
     return `
-      <div class="dash-panel dash-activity-panel">
+      <div class="dash-panel dash-activity-panel stagger-card">
         <h3 class="panel-title">Recent Activity</h3>
         <div class="activity-list">
           ${listHtml}

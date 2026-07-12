@@ -6,7 +6,7 @@
 (function () {
   'use strict';
 
-  const API_URL = window.location.origin;
+  const API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? 'http://localhost:8000' : window.location.origin;
 
   // ── Client Cache (Synchronized on load & mutations) ──
   let mockVehicles = [];
@@ -15,6 +15,10 @@
   let mockMaintenanceLogs = [];
   let mockFuelLogs = [];
   let mockExpenses = [];
+  let mockReports = [
+    { id: 'R001', name: 'Vehicle Registry — 10 Jul 2026', sourceSection: 'Vehicles', format: 'CSV', generatedAt: '2026-07-10T09:30:00Z', rowCount: 12 },
+    { id: 'R002', name: 'Maintenance Logs — 11 Jul 2026', sourceSection: 'Maintenance', format: 'PDF', generatedAt: '2026-07-11T14:15:00Z', rowCount: 6 },
+  ];
   let currentRole = localStorage.getItem('transitops_role') || 'Fleet Manager';
 
   // Helper to get authorization headers
@@ -353,9 +357,100 @@
     return getTotalFuelCost(vehicleId) + getTotalMaintenanceCost(vehicleId) + getTotalExpenses(vehicleId);
   }
 
+  // ── Reports and Analytics Helpers ──
+  function getReports() {
+    return [...mockReports];
+  }
+
+  function getMockRevenuePerVehicle(vehicleId) {
+    // Mocking revenue as 1500 per 10km of odometer reading for demonstration
+    const v = getVehicleById(vehicleId);
+    if (!v) return 0;
+    return (v.odometer / 10) * 1500;
+  }
+
+  function generateReport(sourceSection, format, data, isRedownload = false) {
+    if (!data || data.length === 0) return false;
+
+    const todayDateString = new Date().toISOString().split('T')[0];
+
+    if (format === 'CSV') {
+      const headers = Object.keys(data[0]);
+      const csvRows = [];
+      csvRows.push(headers.join(','));
+      for (const row of data) {
+        const values = headers.map(header => {
+          let val = '' + (row[header] || '');
+          if (val.includes(',') || val.includes('"') || val.includes('\n')) {
+            val = `"${val.replace(/"/g, '""')}"`;
+          }
+          return val;
+        });
+        csvRows.push(values.join(','));
+      }
+      const csvContent = csvRows.join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `${sourceSection}-${todayDateString}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } else if (format === 'PDF') {
+      if (window.jspdf && window.jspdf.jsPDF) {
+        const doc = new window.jspdf.jsPDF();
+        if (typeof doc.autoTable !== 'function') {
+          console.error('jsPDF-autotable plugin not attached to jsPDF prototype.');
+          return false;
+        }
+        const headers = Object.keys(data[0]);
+        const rows = data.map(obj => headers.map(h => '' + (obj[h] || '')));
+        doc.setFontSize(18);
+        doc.text(`TransitOps — ${sourceSection} Report`, 14, 22);
+        doc.setFontSize(11);
+        doc.setTextColor(100);
+        doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 30);
+        doc.autoTable({
+          head: [headers],
+          body: rows,
+          startY: 36,
+          theme: 'grid',
+          headStyles: { fillColor: [212, 255, 63], textColor: [10, 10, 12] }
+        });
+        doc.save(`${sourceSection}-${todayDateString}.pdf`);
+      } else {
+        console.error('jsPDF not loaded');
+        return false;
+      }
+    }
+
+    if (!isRedownload) {
+      const reportId = 'R' + String(mockReports.length + 1).padStart(3, '0');
+      const now = new Date().toISOString();
+      const formattedDate = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+      mockReports.push({
+        id: reportId,
+        name: `${sourceSection} — ${formattedDate}`,
+        sourceSection,
+        format,
+        generatedAt: now,
+        rowCount: data.length,
+        data: data
+      });
+    }
+    return true;
+  }
+
+  const _metricsCache = {};
 
   // ── Public API ──
   window.DataLayer = {
+    // Metric Caching
+    getPreviousMetric: (id) => _metricsCache[id],
+    setPreviousMetric: (id, val) => { _metricsCache[id] = val; },
+
     // Sync
     syncFromBackend,
 
@@ -415,6 +510,11 @@
     getTotalMaintenanceCost,
     getTotalExpenses,
     getOperationalCost,
+
+    // Reports
+    getReports,
+    getMockRevenuePerVehicle,
+    generateReport,
   };
 
 })();

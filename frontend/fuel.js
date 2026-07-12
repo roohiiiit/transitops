@@ -322,6 +322,16 @@
     });
   }
 
+  function getFilteredSpendData() {
+    if (currentTab === 'Fuel') {
+      return DataLayer.getFuelLogs();
+    } else if (currentTab === 'Expense') {
+      return DataLayer.getExpenses();
+    } else {
+      return getCombinedLogs();
+    }
+  }
+
   // --- Page Renderer ---
   function renderFuelPage() {
     const role = DataLayer.getCurrentRole();
@@ -330,11 +340,14 @@
     const html = `
       <div class="page-toolbar">
         <div class="page-toolbar-left"></div>
-        ${canCreate ? `
-          <button class="btn btn--accent" id="btn-add-expense">
-            <span class="btn-icon">+</span> Log Spend
-          </button>
-        ` : ''}
+        <div style="display: flex; gap: 12px;">
+          <button class="btn btn--ghost" id="btn-report-fuel">Generate Report</button>
+          ${canCreate ? `
+            <button class="btn btn--accent" id="btn-add-expense">
+              <span class="btn-icon">+</span> Log Spend
+            </button>
+          ` : ''}
+        </div>
       </div>
       <div id="fuel-content-wrap">
         ${buildStatsBar()}
@@ -343,15 +356,34 @@
       </div>
     `;
 
-    Layout.setPageContent(html);
-    bindEvents();
-
-    if (canCreate) {
-      document.getElementById('btn-add-expense').addEventListener('click', openAddModal);
-    }
+    return html;
   }
 
   // --- Register Page ---
-  TransitOps.registerPage('fuel', renderFuelPage);
+  TransitOps.registerPage('fuel', () => {
+    setTimeout(() => {
+      bindEvents();
+
+      const role = DataLayer.getCurrentRole();
+      const canCreate = (role === 'Fleet Manager' || role === 'Financial Analyst');
+      if (canCreate) {
+        const addBtn = document.getElementById('btn-add-expense');
+        if (addBtn) addBtn.addEventListener('click', openAddModal);
+      }
+
+      const reportBtn = document.getElementById('btn-report-fuel');
+      if (reportBtn) {
+        reportBtn.addEventListener('click', () => {
+          if (window.TransitOps && typeof window.TransitOps.openReportModal === 'function') {
+            window.TransitOps.openReportModal('Fuel & Expense', () => getFilteredSpendData());
+          } else {
+            console.error("window.TransitOps.openReportModal is undefined when Generate Report was clicked");
+          }
+        });
+      }
+    }, 200);
+
+    return renderFuelPage();
+  });
 
 })();

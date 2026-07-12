@@ -317,14 +317,17 @@
     const role = DataLayer.getCurrentRole();
     const canCreate = (role === 'Fleet Manager');
 
-    const html = `
+    return `
       <div class="page-toolbar">
         <div class="page-toolbar-left"></div>
-        ${canCreate ? `
-          <button class="btn btn--accent" id="btn-add-maint">
-            <span class="btn-icon">+</span> Open Ticket
-          </button>
-        ` : ''}
+        <div style="display: flex; gap: 12px;">
+          <button class="btn btn--ghost" id="btn-report-maintenance">Generate Report</button>
+          ${canCreate ? `
+            <button class="btn btn--accent" id="btn-add-maint">
+              <span class="btn-icon">+</span> Open Ticket
+            </button>
+          ` : ''}
+        </div>
       </div>
       <div id="maintenance-content-wrap">
         ${buildStatsBar()}
@@ -332,16 +335,33 @@
         ${buildMaintenanceTable()}
       </div>
     `;
-
-    Layout.setPageContent(html);
-    bindEvents();
-
-    if (canCreate) {
-      document.getElementById('btn-add-maint').addEventListener('click', openAddModal);
-    }
   }
 
   // --- Register Page ---
-  TransitOps.registerPage('maintenance', renderMaintenancePage);
+  TransitOps.registerPage('maintenance', () => {
+    setTimeout(() => {
+      bindEvents();
+
+      const role = DataLayer.getCurrentRole();
+      const canCreate = (role === 'Fleet Manager');
+      if (canCreate) {
+        const addBtn = document.getElementById('btn-add-maint');
+        if (addBtn) addBtn.addEventListener('click', openAddModal);
+      }
+
+      const reportBtn = document.getElementById('btn-report-maintenance');
+      if (reportBtn) {
+        reportBtn.addEventListener('click', () => {
+          if (window.TransitOps && typeof window.TransitOps.openReportModal === 'function') {
+            window.TransitOps.openReportModal('Maintenance', () => getFilteredLogs());
+          } else {
+            console.error("window.TransitOps.openReportModal is undefined when Generate Report was clicked");
+          }
+        });
+      }
+    }, 200);
+
+    return renderMaintenancePage();
+  });
 
 })();

@@ -75,10 +75,10 @@
           const count = counts[cat.key] || 0;
           const isActive = activeFilter === cat.key;
           return `
-            <button class="dm-filter-card${isActive ? ' dm-filter-card--active' : ''}"
+            <button class="dm-filter-card${isActive ? ' dm-filter-card--active' : ''} stagger-card"
                     data-filter="${cat.key}"
                     style="--card-accent: ${cat.color}">
-              <div class="dm-filter-count font-display">${count}</div>
+              <div class="dm-filter-count font-display animate-number" data-metric-id="dr-cat-${cat.key}" data-value="${count}">${count}</div>
               <div class="dm-filter-label">${cat.label}</div>
             </button>
           `;
@@ -131,7 +131,7 @@
 
     if (drivers.length === 0) {
       return `
-        <div class="dm-empty-state">
+        <div class="dm-empty-state empty-state">
           <div class="dm-empty-icon">${DRIVER_ICON}</div>
           <div class="dm-empty-text">No drivers in this category</div>
         </div>
@@ -141,14 +141,21 @@
     return `
       <div class="dm-grid" id="dm-grid">
         ${drivers.map(d => {
-          const dimmed = (d.status === 'Suspended') ? ' dm-card--dimmed' : '';
-          const pillClass = STATUS_CLASS[d.status] || '';
+      const dimmed = (d.status === 'Suspended') ? ' dm-card--dimmed' : '';
+      const pillClass = STATUS_CLASS[d.status] || '';
+      
+      let flashClass = '';
+      if (window.DataLayer && window.DataLayer.getPreviousMetric) {
+        const lastStatus = window.DataLayer.getPreviousMetric(`dr-status-${d.id}`);
+        if (lastStatus && lastStatus !== d.status) flashClass = ' flash-pill';
+        window.DataLayer.setPreviousMetric(`dr-status-${d.id}`, d.status);
+      }
 
-          return `
-            <div class="dm-card${dimmed}" data-id="${d.id}">
+      return `
+            <div class="dm-card${dimmed} stagger-card" data-id="${d.id}">
               <div class="dm-card-top">
                 <span class="dm-card-icon">${DRIVER_ICON}</span>
-                <span class="status-pill ${pillClass}">${d.status}</span>
+                <span class="status-pill ${pillClass}${flashClass}">${d.status}</span>
               </div>
               <div class="dm-card-name font-display">${d.name}</div>
               <div class="dm-card-license">
@@ -254,7 +261,7 @@
             </div>
             <div class="modal-footer">
               <button type="button" class="btn btn--ghost" id="modal-cancel-btn">Cancel</button>
-              <button type="submit" class="btn btn--accent">Add Driver</button>
+              <button type="submit" class="btn btn--accent" id="btn-submit-driver" style="width: 140px;">Add Driver</button>
             </div>
           </form>
         </div>
@@ -342,25 +349,34 @@
 
     if (!nameValid || !licenseValid || !expiryValid || !scoreValid) return;
 
-    DataLayer.addDriver({
-      name:            document.getElementById('d-name').value.trim(),
-      licenseNumber:   document.getElementById('d-license').value.trim(),
-      licenseCategory: document.getElementById('d-category').value,
-      licenseExpiry:   document.getElementById('d-expiry').value,
-      contactNumber:   document.getElementById('d-contact').value.trim(),
-      safetyScore:     Number(document.getElementById('d-score').value),
-      status:          document.getElementById('d-status').value,
-    });
+    const btn = document.getElementById('btn-submit-driver');
+    btn.innerHTML = '<span class="spinner"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 2v4"></path></svg></span>';
+    btn.disabled = true;
 
-    closeModal();
-    refreshContent();
+    // Simulate short network delay for animation
+    setTimeout(() => {
+      DataLayer.addDriver({
+        name:            document.getElementById('d-name').value.trim(),
+        licenseNumber:   document.getElementById('d-license').value.trim(),
+        licenseCategory: document.getElementById('d-category').value,
+        licenseExpiry:   document.getElementById('d-expiry').value,
+        contactNumber:   document.getElementById('d-contact').value.trim(),
+        safetyScore:     Number(document.getElementById('d-score').value),
+        status:          document.getElementById('d-status').value,
+      });
+
+      closeModal();
+      refreshContent();
+    }, 200);
   }
 
   function closeModal() {
     const overlay = document.getElementById('driver-modal-overlay');
     if (overlay) {
-      overlay.classList.remove('open');
-      setTimeout(() => overlay.remove(), 200);
+      overlay.classList.add('is-closing');
+      const panel = overlay.querySelector('.modal');
+      if (panel) panel.classList.add('is-closing');
+      setTimeout(() => overlay.remove(), 180);
     }
   }
 
@@ -476,8 +492,10 @@
   function closeDrawer() {
     const overlay = document.getElementById('drawer-overlay');
     if (overlay) {
-      overlay.classList.remove('open');
-      setTimeout(() => overlay.remove(), 200);
+      overlay.classList.add('is-closing');
+      const drawer = document.getElementById('driver-drawer');
+      if (drawer) drawer.classList.add('is-closing');
+      setTimeout(() => overlay.remove(), 220);
     }
   }
 
@@ -486,9 +504,12 @@
     const html = `
       <div class="page-toolbar">
         <div class="page-toolbar-left"></div>
-        <button class="btn btn--accent" id="btn-add-driver">
-          <span class="btn-icon">+</span> Add Driver
-        </button>
+        <div style="display: flex; gap: 12px;">
+          <button class="btn btn--ghost" id="btn-report-drivers">Generate Report</button>
+          <button class="btn btn--accent" id="btn-add-driver">
+            <span class="btn-icon">+</span> Add Driver
+          </button>
+        </div>
       </div>
       <div id="dm-content-wrap">
         ${buildFilterCards()}
@@ -496,15 +517,38 @@
       </div>
     `;
 
-    Layout.setPageContent(html);
-    bindFilterClicks();
-    bindCardClicks();
-
-    document.getElementById('btn-add-driver').addEventListener('click', openAddModal);
+    return html;
   }
 
   // ── Register with app controller ──
-  TransitOps.registerPage('drivers', renderDriversPage);
+  TransitOps.registerPage('drivers', () => {
+    setTimeout(() => {
+      bindFilterClicks();
+      bindCardClicks();
+
+      const addBtn = document.getElementById('btn-add-driver');
+      if (addBtn) addBtn.addEventListener('click', openAddModal);
+
+      const reportBtn = document.getElementById('btn-report-drivers');
+      if (reportBtn) {
+        reportBtn.addEventListener('click', () => {
+          if (window.TransitOps && typeof window.TransitOps.openReportModal === 'function') {
+            window.TransitOps.openReportModal('Drivers', () => {
+              let data = DataLayer.getDrivers();
+              if (activeFilter !== 'all') {
+                data = data.filter(d => d.status === activeFilter);
+              }
+              return data;
+            });
+          } else {
+            console.error("window.TransitOps.openReportModal is undefined when Generate Report was clicked");
+          }
+        });
+      }
+    }, 200);
+
+    return renderDriversPage();
+  });
 
   // ── Public API ──
   window.TransitOpsDrivers = {
