@@ -7,7 +7,11 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-SECRET_KEY = os.environ["SECRET_KEY"]
+import logging
+SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY:
+    logging.warning("No SECRET_KEY found in environment. Using a fallback dummy key. DO NOT USE IN PRODUCTION.")
+    SECRET_KEY = "dummy-secret-key-for-local-dev"
 ALGORITHM = os.getenv("ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 30))
 
