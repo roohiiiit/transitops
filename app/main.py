@@ -10,10 +10,17 @@ import re
 import io
 import json
 import os
+from dotenv import load_dotenv
+load_dotenv()
+
 from google import genai
 from PIL import Image
 
-client = genai.Client(api_key=os.getenv("GEMINI_API_KEY", ""))
+api_key = os.getenv("GEMINI_API_KEY")
+if not api_key:
+    # Just in case we run without the env var, provide a fallback behavior so the server doesn't crash on import
+    api_key = "dummy_key"
+client = genai.Client(api_key=api_key)
 
 from app.database import Base, engine, get_db, SessionLocal
 from app.models import User, Vehicle, Driver, Trip, MaintenanceLog, FuelLog, Expense
