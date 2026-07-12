@@ -32,6 +32,11 @@
 
   // Helper to handle API response and throw errors from backend validation
   async function handleResponse(res) {
+    if (res.status === 401) {
+      localStorage.removeItem('transitops_token');
+      window.location.reload();
+      throw new Error("Unauthorized");
+    }
     const data = await res.json();
     if (!res.ok) {
       const err = data.detail || 'An error occurred';
