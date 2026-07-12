@@ -1,0 +1,270 @@
+/* ═══════════════════════════════════════════════════════════
+   TransitOps — Layout Shell
+   Sidebar + Topbar + Content Area
+   Injected once, reused by all pages.
+   ═══════════════════════════════════════════════════════════ */
+
+(function () {
+  'use strict';
+
+  // ── SVG Icon Factory ──
+  function svg(paths, size) {
+    const w = size || 20;
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${w}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`;
+  }
+
+  // ── Icon Paths (24×24 viewBox, Lucide-compatible) ──
+  const ICONS = {
+    dashboard:
+      '<rect x="3" y="3" width="7" height="7" rx="1"/>' +
+      '<rect x="14" y="3" width="7" height="7" rx="1"/>' +
+      '<rect x="3" y="14" width="7" height="7" rx="1"/>' +
+      '<rect x="14" y="14" width="7" height="7" rx="1"/>',
+
+    vehicles:
+      '<rect x="2" y="7" width="12" height="9" rx="1"/>' +
+      '<path d="M14 10h3.5l2.5 3v3h-6"/>' +
+      '<circle cx="6.5" cy="17.5" r="2.5"/>' +
+      '<circle cx="17" cy="17.5" r="2.5"/>',
+
+    drivers:
+      '<circle cx="12" cy="8" r="4"/>' +
+      '<path d="M5 21v-1a7 7 0 0 1 14 0v1"/>',
+
+    trips:
+      '<path d="M3 7l6-3 6 3 6-3v14l-6 3-6-3-6 3V7z"/>' +
+      '<path d="M9 4v14"/>' +
+      '<path d="M15 7v14"/>',
+
+    maintenance:
+      '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>',
+
+    fuel:
+      '<rect x="5" y="2" width="10" height="18" rx="1"/>' +
+      '<line x1="4" y1="22" x2="16" y2="22"/>' +
+      '<rect x="7" y="5" width="6" height="4"/>' +
+      '<path d="M15 8h2.5L20 11v5a1 1 0 0 1-1 1h-1"/>',
+
+    reports:
+      '<path d="M3 3v18h18"/>' +
+      '<rect x="7" y="13" width="3" height="5" rx="0.5"/>' +
+      '<rect x="12" y="8" width="3" height="10" rx="0.5"/>' +
+      '<rect x="17" y="11" width="3" height="7" rx="0.5"/>',
+
+    search:
+      '<circle cx="11" cy="11" r="8"/>' +
+      '<path d="M21 21l-4.35-4.35"/>',
+  };
+
+  // ── Navigation Config ──
+  const NAV_ITEMS = [
+    { id: 'dashboard',   label: 'Dashboard',       icon: ICONS.dashboard },
+    { id: 'vehicles',    label: 'Vehicles',         icon: ICONS.vehicles },
+    { id: 'drivers',     label: 'Drivers',          icon: ICONS.drivers },
+    { id: 'trips',       label: 'Trips',            icon: ICONS.trips },
+    { id: 'maintenance', label: 'Maintenance',      icon: ICONS.maintenance },
+    { id: 'fuel',        label: 'Fuel & Expense',   icon: ICONS.fuel },
+    { id: 'reports',     label: 'Reports',          icon: ICONS.reports },
+  ];
+
+  const PAGE_TITLES = {
+    dashboard:   'Dashboard',
+    vehicles:    'Vehicle Registry',
+    drivers:     'Driver Management',
+    trips:       'Trip Management',
+    maintenance: 'Maintenance',
+    fuel:        'Fuel & Expense',
+    reports:     'Reports & Analytics',
+  };
+
+  // ── Role-Based Access ──
+  const ROLE_PERMISSIONS = {
+    'Fleet Manager':     ['Dashboard', 'Vehicles', 'Drivers', 'Trips', 'Maintenance', 'Fuel & Expense', 'Reports'],
+    'Driver':            ['Dashboard', 'Trips'],
+    'Safety Officer':    ['Dashboard', 'Drivers', 'Trips'],
+    'Financial Analyst': ['Dashboard', 'Vehicles', 'Fuel & Expense', 'Reports'],
+  };
+
+  const ALL_ROLES = Object.keys(ROLE_PERMISSIONS);
+  let currentRole = 'Fleet Manager';
+
+  // ── Get nav items for current role ──
+  function getNavItemsForRole(role) {
+    const allowed = ROLE_PERMISSIONS[role] || [];
+    return NAV_ITEMS.filter(item => allowed.includes(item.label));
+  }
+
+  // ── Render sidebar nav (called on init and role change) ──
+  function renderNav() {
+    const navEl = document.getElementById('sidebar-nav');
+    if (!navEl) return;
+
+    const items = getNavItemsForRole(currentRole);
+    navEl.innerHTML = items.map(item => `
+      <a class="nav-item" data-page="${item.id}" id="nav-${item.id}">
+        <span class="nav-icon">${svg(item.icon)}</span>
+        <span class="nav-label">${item.label}</span>
+      </a>
+    `).join('');
+
+    // Re-bind click handlers
+    navEl.querySelectorAll('.nav-item').forEach(el => {
+      el.addEventListener('click', (e) => {
+        e.preventDefault();
+        const pageId = el.dataset.page;
+        if (window.TransitOps && window.TransitOps.navigate) {
+          window.TransitOps.navigate(pageId);
+        }
+      });
+    });
+  }
+
+  // ── Set role + re-render ──
+  function setRole(role) {
+    if (!ROLE_PERMISSIONS[role]) return;
+    currentRole = role;
+
+    // Update the role-switcher dropdown value
+    const select = document.getElementById('role-switcher');
+    if (select) select.value = role;
+
+    // Re-render sidebar
+    renderNav();
+
+    // If current page is no longer allowed, navigate to Dashboard
+    const allowed = getNavItemsForRole(role).map(i => i.id);
+    const current = window.TransitOps && window.TransitOps.currentPage();
+    if (current && !allowed.includes(current)) {
+      if (window.TransitOps && window.TransitOps.navigate) {
+        window.TransitOps.navigate('dashboard');
+      }
+    } else if (current) {
+      // Re-mark the active item since nav was rebuilt
+      setActivePage(current);
+    }
+  }
+
+  // ── Build Layout Shell ──
+  function createLayout() {
+    // Role-switcher dropdown options
+    const roleOptions = ALL_ROLES.map(role =>
+      `<option value="${role}"${role === currentRole ? ' selected' : ''}>${role}</option>`
+    ).join('');
+
+    document.body.innerHTML = `
+      <!-- ═══ SIDEBAR ═══ -->
+      <aside class="sidebar" id="sidebar">
+        <div class="sidebar-brand">
+          <div class="wordmark">
+            <span class="wordmark-full">Transit<span class="accent">Ops</span></span>
+            <span class="wordmark-short"><span class="accent">T</span>·</span>
+          </div>
+        </div>
+
+        <nav class="sidebar-nav" id="sidebar-nav">
+          <!-- populated by renderNav() -->
+        </nav>
+
+        <div class="sidebar-footer">
+          <div class="sidebar-status">
+            <span class="status-dot"></span>
+            <span class="sidebar-version">v1.0 · operational</span>
+          </div>
+        </div>
+      </aside>
+
+      <!-- ═══ TOPBAR ═══ -->
+      <header class="topbar" id="topbar">
+        <h1 class="page-title" id="page-title">Dashboard</h1>
+        <div class="topbar-right">
+          <div class="search-wrapper">
+            <input type="text" class="search-input" placeholder="Search fleet..." id="global-search">
+            <span class="search-icon">${svg(ICONS.search, 15)}</span>
+          </div>
+          <div class="role-switcher-wrapper">
+            <span class="role-dot"></span>
+            <select id="role-switcher" class="role-switcher">
+              ${roleOptions}
+            </select>
+          </div>
+        </div>
+      </header>
+
+      <!-- ═══ MAIN CONTENT ═══ -->
+      <main class="main-content" id="main-content">
+        <div id="page-content"></div>
+      </main>
+    `;
+
+    // Render initial nav for current role
+    renderNav();
+
+    // Bind role-switcher change
+    document.getElementById('role-switcher').addEventListener('change', (e) => {
+      setRole(e.target.value);
+    });
+  }
+
+  // ── Update Active Page ──
+  function setActivePage(pageId) {
+    document.querySelectorAll('.nav-item').forEach(item => {
+      item.classList.toggle('active', item.dataset.page === pageId);
+    });
+
+    const titleEl = document.getElementById('page-title');
+    if (titleEl) {
+      titleEl.textContent = PAGE_TITLES[pageId] || pageId;
+    }
+  }
+
+  // ── Inject Page Content with Transition ──
+  function setPageContent(html) {
+    const container = document.getElementById('page-content');
+    if (!container) return;
+
+    container.classList.remove('page-enter');
+    container.innerHTML = html;
+    // Force reflow to restart animation
+    void container.offsetWidth;
+    container.classList.add('page-enter');
+  }
+
+  // ── Get Content Container (for direct DOM manipulation) ──
+  function getContentElement() {
+    return document.getElementById('page-content');
+  }
+
+  // ── Show / Hide Shell (for Login page) ──
+  function setShellVisible(visible) {
+    const sidebar = document.getElementById('sidebar');
+    const topbar  = document.getElementById('topbar');
+    const main    = document.getElementById('main-content');
+
+    if (sidebar) sidebar.style.display = visible ? '' : 'none';
+    if (topbar)  topbar.style.display  = visible ? '' : 'none';
+
+    if (main) {
+      main.style.marginLeft = visible ? '' : '0';
+      main.style.marginTop  = visible ? '' : '0';
+      main.style.height     = visible ? '' : '100vh';
+    }
+  }
+
+  // ── Public API ──
+  window.Layout = {
+    create:            createLayout,
+    setActivePage:     setActivePage,
+    setPageContent:    setPageContent,
+    getContentElement: getContentElement,
+    setShellVisible:   setShellVisible,
+    setRole:           setRole,
+    getRole:           () => currentRole,
+    getNavItemsForRole: getNavItemsForRole,
+    NAV_ITEMS:         NAV_ITEMS,
+    PAGE_TITLES:       PAGE_TITLES,
+    ROLE_PERMISSIONS:  ROLE_PERMISSIONS,
+    svg:               svg,
+    ICONS:             ICONS,
+  };
+
+})();
