@@ -1,7 +1,7 @@
 import os
 from datetime import datetime, date
 from typing import List, Optional
-from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File
+from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
@@ -46,7 +46,7 @@ app = FastAPI(
 # Enable CORS for frontend integration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, specify actual domain
+    allow_origins=os.getenv("CORS_ORIGINS", "http://localhost:8080").split(","),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -200,6 +200,17 @@ async def get_current_user(
         )
     return user
 
+def require_role(allowed_roles: List[str]):
+    def role_checker(current_user: User = Depends(get_current_user)):
+        if current_user.role not in allowed_roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Operation not permitted. Required role: {', '.join(allowed_roles)}"
+            )
+        return current_user
+    return role_checker
+
+from fastapi.responses import FileResponse
 
 
 # --- Authentication ---
@@ -223,11 +234,27 @@ def register(user_in: UserCreate, db: Session = Depends(get_db)):
     db.refresh(db_user)
     return db_user
 
+login_attempts = {}
+
 @app.post("/auth/token", response_model=Token, tags=["Authentication"])
 def login_for_access_token(
+    request: Request,
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db)
 ):
+    ip = request.client.host
+    now = datetime.now()
+    if ip in login_attempts:
+        attempts, last_time = login_attempts[ip]
+        if (now - last_time).seconds < 60:
+            if attempts >= 5:
+                raise HTTPException(status_code=429, detail="Too many login attempts. Try again in a minute.")
+            login_attempts[ip] = (attempts + 1, now)
+        else:
+            login_attempts[ip] = (1, now)
+    else:
+        login_attempts[ip] = (1, now)
+
     user = db.query(User).filter(User.email == form_data.username).first()
     if not user or not verify_password(form_data.password, user.hashed_password):
         raise HTTPException(
@@ -250,7 +277,7 @@ def list_vehicles(db: Session = Depends(get_db), current_user: User = Depends(ge
     return db.query(Vehicle).all()
 
 @app.post("/vehicles", response_model=VehicleResponse, status_code=status.HTTP_201_CREATED, tags=["Vehicles"])
-def create_vehicle(vehicle: VehicleCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def create_vehicle(vehicle: VehicleCreate, db: Session = Depends(get_db), current_user: User = Depends(require_role(['Fleet Manager', 'Safety Officer', 'Financial Analyst']))):
     existing = db.query(Vehicle).filter(Vehicle.regNumber == vehicle.regNumber).first()
     if existing:
         raise HTTPException(
@@ -282,7 +309,7 @@ def update_vehicle(id: int, updates: VehicleCreate, db: Session = Depends(get_db
     return db_vehicle
 
 @app.delete("/vehicles/{id}", status_code=status.HTTP_204_NO_CONTENT, tags=["Vehicles"])
-def delete_vehicle(id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def delete_vehicle(id: int, db: Session = Depends(get_db), current_user: User = Depends(require_role(['Fleet Manager', 'Safety Officer', 'Financial Analyst']))):
     db_vehicle = db.query(Vehicle).filter(Vehicle.id == id).first()
     if not db_vehicle:
         raise HTTPException(status_code=404, detail="Vehicle not found")
@@ -297,7 +324,7 @@ def list_drivers(db: Session = Depends(get_db), current_user: User = Depends(get
     return db.query(Driver).all()
 
 @app.post("/drivers", response_model=DriverResponse, status_code=status.HTTP_201_CREATED, tags=["Drivers"])
-def create_driver(driver: DriverCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def create_driver(driver: DriverCreate, db: Session = Depends(get_db), current_user: User = Depends(require_role(['Fleet Manager', 'Safety Officer', 'Financial Analyst']))):
     existing = db.query(Driver).filter(Driver.licenseNumber == driver.licenseNumber).first()
     if existing:
         raise HTTPException(
@@ -329,7 +356,7 @@ def update_driver(id: int, updates: DriverCreate, db: Session = Depends(get_db),
     return db_driver
 
 @app.delete("/drivers/{id}", status_code=status.HTTP_204_NO_CONTENT, tags=["Drivers"])
-def delete_driver(id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def delete_driver(id: int, db: Session = Depends(get_db), current_user: User = Depends(require_role(['Fleet Manager', 'Safety Officer', 'Financial Analyst']))):
     db_driver = db.query(Driver).filter(Driver.id == id).first()
     if not db_driver:
         raise HTTPException(status_code=404, detail="Driver not found")
@@ -344,7 +371,7 @@ def list_trips(db: Session = Depends(get_db), current_user: User = Depends(get_c
     return db.query(Trip).all()
 
 @app.post("/trips", response_model=TripResponse, status_code=status.HTTP_201_CREATED, tags=["Trips"])
-def create_trip(trip: TripCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def create_trip(trip: TripCreate, db: Session = Depends(get_db), current_user: User = Depends(require_role(['Fleet Manager', 'Safety Officer', 'Financial Analyst']))):
     # Validate vehicle assignment if provided
     if trip.vehicleId:
         vehicle = db.query(Vehicle).filter(Vehicle.id == trip.vehicleId).first()
@@ -401,7 +428,7 @@ def update_trip_location(id: int, location: TripLocationUpdate, db: Session = De
     return db_trip
 
 @app.post("/trips/{id}/dispatch", response_model=TripResponse, tags=["Trips"])
-def dispatch_trip(id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def dispatch_trip(id: int, db: Session = Depends(get_db), current_user: User = Depends(require_role(['Fleet Manager', 'Safety Officer', 'Financial Analyst']))):
     db_trip = db.query(Trip).filter(Trip.id == id).first()
     if not db_trip:
         raise HTTPException(status_code=404, detail="Trip not found")
@@ -447,7 +474,7 @@ def dispatch_trip(id: int, db: Session = Depends(get_db), current_user: User = D
     return db_trip
 
 @app.post("/trips/{id}/complete", response_model=TripResponse, tags=["Trips"])
-def complete_trip(id: int, actualOdometer: float, fuelConsumed: float, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def complete_trip(id: int, actualOdometer: float, fuelConsumed: float, db: Session = Depends(get_db), current_user: User = Depends(require_role(['Driver', 'Fleet Manager']))):
     db_trip = db.query(Trip).filter(Trip.id == id).first()
     if not db_trip:
         raise HTTPException(status_code=404, detail="Trip not found")
@@ -488,7 +515,7 @@ def complete_trip(id: int, actualOdometer: float, fuelConsumed: float, db: Sessi
     return db_trip
 
 @app.post("/trips/{id}/cancel", response_model=TripResponse, tags=["Trips"])
-def cancel_trip(id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def cancel_trip(id: int, db: Session = Depends(get_db), current_user: User = Depends(require_role(['Fleet Manager', 'Safety Officer', 'Financial Analyst']))):
     db_trip = db.query(Trip).filter(Trip.id == id).first()
     if not db_trip:
         raise HTTPException(status_code=404, detail="Trip not found")
@@ -515,7 +542,7 @@ def list_maintenance(db: Session = Depends(get_db), current_user: User = Depends
     return db.query(MaintenanceLog).all()
 
 @app.post("/maintenance", response_model=MaintenanceLogResponse, status_code=status.HTTP_201_CREATED, tags=["Maintenance"])
-def create_maintenance(log: MaintenanceLogCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def create_maintenance(log: MaintenanceLogCreate, db: Session = Depends(get_db), current_user: User = Depends(require_role(['Fleet Manager', 'Safety Officer', 'Financial Analyst']))):
     vehicle = db.query(Vehicle).filter(Vehicle.id == log.vehicleId).first()
     if not vehicle:
         raise HTTPException(status_code=404, detail="Vehicle not found")
@@ -530,7 +557,7 @@ def create_maintenance(log: MaintenanceLogCreate, db: Session = Depends(get_db),
     return db_log
 
 @app.put("/maintenance/{id}/close", response_model=MaintenanceLogResponse, tags=["Maintenance"])
-def close_maintenance(id: int, dateClosed: str, cost: float, notes: Optional[str] = None, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def close_maintenance(id: int, dateClosed: str, cost: float, notes: Optional[str] = None, db: Session = Depends(get_db), current_user: User = Depends(require_role(['Fleet Manager', 'Safety Officer', 'Financial Analyst']))):
     db_log = db.query(MaintenanceLog).filter(MaintenanceLog.id == id).first()
     if not db_log:
         raise HTTPException(status_code=404, detail="Maintenance log not found")
@@ -569,7 +596,7 @@ def list_expenses(db: Session = Depends(get_db), current_user: User = Depends(ge
     return db.query(Expense).all()
 
 @app.post("/expenses", response_model=ExpenseResponse, status_code=status.HTTP_201_CREATED, tags=["Expenses"])
-def create_expense(expense: ExpenseCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def create_expense(expense: ExpenseCreate, db: Session = Depends(get_db), current_user: User = Depends(require_role(['Fleet Manager', 'Safety Officer', 'Financial Analyst']))):
     db_log = Expense(**expense.model_dump())
     db.add(db_log)
     db.commit()

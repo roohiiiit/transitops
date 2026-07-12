@@ -94,19 +94,7 @@
         </div>
       </div>
     `;
-
-    Layout.setPageContent(html);
-
-    // Initialize map in container
-    MapComponent.init('trip-map-container');
-    const loaderText = document.getElementById('map-loader-text');
-    if (loaderText) loaderText.remove();
-
-    // Populate selects
-    populateDropdowns();
-
-    // Bind event listeners
-    bindFormEvents();
+    return html;
   }
 
   // Populate Dropdowns
@@ -163,8 +151,8 @@
           panel.innerHTML = `<div style="padding: 10px; color: var(--text-muted); font-size:11px; font-family:var(--font-mono);">No addresses found</div>`;
         } else {
           panel.innerHTML = results.map(item => `
-            <div class="geo-suggest-item" style="padding: 8px 12px; cursor: pointer; font-size:12px; border-bottom: 1px solid var(--border-color); color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='transparent'" data-lat="${item.lat}" data-lon="${item.lon}" data-name="${item.display_name}">
-              ${item.display_name}
+            <div class="geo-suggest-item" style="padding: 8px 12px; cursor: pointer; font-size:12px; border-bottom: 1px solid var(--border-color); color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='transparent'" data-lat="${item.lat}" data-lon="${item.lon}" data-name="${escapeHtml(item.display_name)}">
+              ${escapeHtml(item.display_name)}
             </div>
           `).join('');
 
@@ -316,6 +304,20 @@
   }
 
   // --- Register Page ---
-  TransitOps.registerPage('create-trip', renderCreateTripPage);
+  TransitOps.registerPage('create-trip', () => {
+    setTimeout(() => {
+      // Initialize map in container
+      MapComponent.init('trip-map-container');
+      const loaderText = document.getElementById('map-loader-text');
+      if (loaderText) loaderText.remove();
+
+      // Populate selects
+      populateDropdowns();
+
+      // Bind event listeners
+      bindFormEvents();
+    }, 200);
+    return renderCreateTripPage();
+  });
 
 })();

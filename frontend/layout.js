@@ -7,6 +7,17 @@
 (function () {
   'use strict';
 
+  // ── Global XSS Sanitizer ──
+  window.escapeHtml = function(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  };
+
   // ── SVG Icon Factory ──
   function svg(paths, size) {
     const w = size || 20;
@@ -82,6 +93,9 @@
   };
 
   // ── Role-Based Access ──
+  // SECURITY NOTE: Frontend role-based nav hiding is a UI convenience ONLY.
+  // Real access control and authorization MUST be enforced server-side on every API call.
+  // Never trust the client's role state to grant access to sensitive endpoints.
   const ROLE_PERMISSIONS = {
     'Fleet Manager':     ['Dashboard', 'Vehicles', 'Drivers', 'Trips', 'Create Trip', 'Maintenance', 'Fuel & Expense', 'Reports', 'Table Preview'],
     'Driver':            ['Dashboard', 'Trips'],

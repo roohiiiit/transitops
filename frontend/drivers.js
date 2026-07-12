@@ -157,10 +157,10 @@
                 <span class="dm-card-icon">${DRIVER_ICON}</span>
                 <span class="status-pill ${pillClass}${flashClass}">${d.status}</span>
               </div>
-              <div class="dm-card-name font-display">${d.name}</div>
+              <div class="dm-card-name font-display">${escapeHtml(d.name)}</div>
               <div class="dm-card-license">
-                <span class="font-mono">${d.licenseNumber}</span>
-                <span class="dm-card-category">${d.licenseCategory}</span>
+                <span class="font-mono">${escapeHtml(d.licenseNumber)}</span>
+                <span class="dm-card-category">${escapeHtml(d.licenseCategory)}</span>
               </div>
               <div class="dm-card-expiry">
                 <div class="dm-stat-label">LICENSE EXPIRY</div>
@@ -169,7 +169,7 @@
               ${buildSafetyScoreBar(d.safetyScore)}
               <div class="dm-card-contact">
                 <div class="dm-stat-label">CONTACT NUMBER</div>
-                <div class="dm-stat-value font-mono">${d.contactNumber || '—'}</div>
+                <div class="dm-stat-value font-mono">${escapeHtml(d.contactNumber || '—')}</div>
               </div>
             </div>
           `;

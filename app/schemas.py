@@ -1,10 +1,10 @@
 from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 # --- User ---
 class UserBase(BaseModel):
-    email: str
+    email: str = Field(..., pattern=r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$")
 
 class UserCreate(UserBase):
     password: str
@@ -31,9 +31,9 @@ class VehicleBase(BaseModel):
     regNumber: str
     name: Optional[str] = None
     type: str
-    maxLoadKg: float
-    odometer: float
-    acquisitionCost: float
+    maxLoadKg: float = Field(..., ge=0)
+    odometer: float = Field(..., ge=0)
+    acquisitionCost: float = Field(..., ge=0)
     status: str
 
 class VehicleCreate(VehicleBase):
@@ -68,11 +68,11 @@ class TripBase(BaseModel):
     destination: str
     vehicleId: Optional[int] = None
     driverId: Optional[int] = None
-    cargoWeightKg: float
-    plannedDistanceKm: float
+    cargoWeightKg: float = Field(..., ge=0)
+    plannedDistanceKm: float = Field(..., ge=0)
     status: Optional[str] = "Draft"
-    actualOdometer: Optional[float] = None
-    fuelConsumed: Optional[float] = None
+    actualOdometer: Optional[float] = Field(None, ge=0)
+    fuelConsumed: Optional[float] = Field(None, ge=0)
     current_lat: Optional[float] = None
     current_lon: Optional[float] = None
     gps_broadcasting: Optional[bool] = False
@@ -98,7 +98,7 @@ class MaintenanceLogBase(BaseModel):
     serviceType: str
     dateOpened: str
     dateClosed: Optional[str] = None
-    cost: float
+    cost: float = Field(..., ge=0)
     notes: Optional[str] = None
 
 class MaintenanceLogCreate(MaintenanceLogBase):
@@ -113,8 +113,8 @@ class MaintenanceLogResponse(MaintenanceLogBase):
 class FuelLogBase(BaseModel):
     vehicleId: int
     date: str
-    liters: float
-    cost: float
+    liters: float = Field(..., ge=0)
+    cost: float = Field(..., ge=0)
 
 class FuelLogCreate(FuelLogBase):
     pass
@@ -129,7 +129,7 @@ class ExpenseBase(BaseModel):
     vehicleId: int
     type: str
     date: str
-    cost: float
+    cost: float = Field(..., ge=0)
 
 class ExpenseCreate(ExpenseBase):
     pass

@@ -142,9 +142,9 @@
                 <span class="vr-card-icon">${getTypeIcon(v.type)}</span>
                 <span class="status-pill ${pillClass}${flashClass}">${v.status}</span>
               </div>
-              <div class="vr-card-reg font-mono">${v.regNumber}</div>
-              <div class="vr-card-name">${v.name}</div>
-              <div class="vr-card-type">${v.type}</div>
+              <div class="vr-card-reg font-mono">${escapeHtml(v.regNumber)}</div>
+              <div class="vr-card-name">${escapeHtml(v.name)}</div>
+              <div class="vr-card-type">${escapeHtml(v.type)}</div>
               <div class="vr-card-stats">
                 <div class="vr-stat">
                   <div class="vr-stat-label">MAX LOAD</div>
