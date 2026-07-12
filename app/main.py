@@ -525,3 +525,13 @@ def create_expense(expense: ExpenseCreate, db: Session = Depends(get_db), curren
     db.commit()
     db.refresh(db_log)
     return db_log
+
+
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+
+@app.get("/")
+def read_index():
+    return FileResponse("frontend/index.html")
+
+app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")

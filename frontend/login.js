@@ -5,7 +5,7 @@
 (function () {
   'use strict';
 
-  const API_URL = 'http://localhost:8000';
+  const API_URL = window.location.origin;
 
   function renderLoginPage() {
     document.body.className = '';

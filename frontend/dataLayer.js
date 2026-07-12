@@ -6,7 +6,7 @@
 (function () {
   'use strict';
 
-  const API_URL = 'http://localhost:8000';
+  const API_URL = window.location.origin;
 
   // ── Client Cache (Synchronized on load & mutations) ──
   let mockVehicles = [];
