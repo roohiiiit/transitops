@@ -7,6 +7,10 @@ load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./auth.db")
 
+# Railway provides DATABASE_URL as postgres:// but SQLAlchemy requires postgresql://
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
 # For SQLite, we need connect_args={"check_same_thread": False}
 connect_args = {}
 if DATABASE_URL.startswith("sqlite"):
