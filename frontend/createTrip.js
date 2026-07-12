@@ -314,7 +314,7 @@
       // Populate selects
       populateDropdowns();
 
-// Bind event listeners
+      // Bind event listeners
       bindFormEvents();
     }, 200);
     return renderCreateTripPage();

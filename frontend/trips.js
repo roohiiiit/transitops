@@ -6,11 +6,6 @@
   'use strict';
 
   let currentFilter = 'All';
-  let tripMap = null;
-  let tripMapMarker = null;
-  let tripRoutePolyline = null;
-  let mapPollInterval = null;
-  let activeMapTripId = null;
 
   const STATUS_CLASS = {
     'Draft': 'status-pill--shop', // gray/neutral
@@ -180,170 +175,6 @@
   }
 
   // --- Event Binding ---
-  
-
-  // --- Map Modal Logic ---
-  function initMapModal() {
-    if (document.getElementById('trip-map-modal')) return;
-    const modalHtml = `
-      <div id="trip-map-modal" class="modal-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.7); z-index: 1000; justify-content: center; align-items: center; backdrop-filter: blur(4px);">
-        <div style="background: var(--bg-card); width: 90vw; max-width: 800px; height: 80vh; border-radius: 16px; display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--border-color); box-shadow: 0 24px 48px rgba(0,0,0,0.5);">
-          <div style="padding: 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
-            <div>
-              <h2 id="trip-map-title" style="margin: 0; font-family: var(--font-display); font-size: 20px; color: var(--text-primary);">Trip Live Tracking</h2>
-              <div id="trip-map-subtitle" style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">Loading location...</div>
-            </div>
-            <button id="close-map-modal" class="btn btn--ghost" style="padding: 8px;">✕</button>
-          </div>
-          <div id="trip-map-container" style="flex: 1; background: #111;"></div>
-        </div>
-      </div>
-    `;
-    document.body.insertAdjacentHTML('beforeend', modalHtml);
-
-    document.getElementById('close-map-modal').addEventListener('click', closeMapModal);
-    document.getElementById('trip-map-modal').addEventListener('click', (e) => {
-      if (e.target.id === 'trip-map-modal') closeMapModal();
-    });
-  }
-
-  function closeMapModal() {
-    document.getElementById('trip-map-modal').style.display = 'none';
-    if (mapPollInterval) {
-      clearInterval(mapPollInterval);
-      mapPollInterval = null;
-    }
-    activeMapTripId = null;
-  }
-
-  function renderMapMarker(lat, lng) {
-    if (!tripMapMarker) {
-      // Create a custom icon for the vehicle
-      const vehicleIcon = L.icon({
-        iconUrl: 'truck.png',
-        iconSize: [48, 48],
-        iconAnchor: [24, 24]
-      });
-      tripMapMarker = L.marker([lat, lng], { icon: vehicleIcon }).addTo(tripMap);
-    } else {
-      tripMapMarker.setLatLng([lat, lng]);
-    }
-    tripMap.setView([lat, lng], 15, { animate: true });
-  }
-
-  async function pollTripLocation() {
-    if (!activeMapTripId) return;
-    try {
-      const headers = { 'Authorization': `Bearer ${localStorage.getItem('transitops_token')}` };
-      const API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? 'http://localhost:8000' : window.location.origin;
-      const res = await fetch(`${API_URL}/trips/${activeMapTripId}`, { headers });
-      if (res.ok) {
-        const trip = await res.json();
-        if (trip.current_lat && trip.current_lon) {
-          renderMapMarker(trip.current_lat, trip.current_lon);
-          const driver = DataLayer.getDriverById(trip.driverId);
-          const subtitle = document.getElementById('trip-map-subtitle');
-          subtitle.innerHTML = `${driver ? driver.name : 'Unknown Driver'} &bull; ${trip.status} &bull; Lat: ${trip.current_lat.toFixed(4)}, Lng: ${trip.current_lon.toFixed(4)}`;
-        }
-      }
-    } catch (e) {
-      console.error("Polling error", e);
-    }
-  }
-
-  const CITY_COORDS = {
-    'Bangalore': [12.9716, 77.5946],
-    'Chennai': [13.0827, 80.2707],
-    'Coimbatore': [11.0168, 76.9558],
-    'Goa': [15.2993, 74.1240],
-    'Hubli': [15.3647, 75.1240],
-    'Hyderabad': [17.3850, 78.4867],
-    'Mangalore': [12.9141, 74.8560],
-    'Mysore': [12.2958, 76.6394],
-    'Pune': [18.5204, 73.8567]
-  };
-
-  function showMapModal(tripId) {
-    initMapModal();
-    const trip = DataLayer.getTrips().find(t => t.id === Number(tripId));
-    if (!trip) return;
-
-    activeMapTripId = trip.id;
-    document.getElementById('trip-map-modal').style.display = 'flex';
-    document.getElementById('trip-map-title').innerText = `Trip #${String(trip.id).padStart(3, '0')} — Live Tracking`;
-    document.getElementById('trip-map-subtitle').innerText = 'Locating vehicle...';
-
-    // Initialize Leaflet if not already
-    if (!tripMap) {
-      tripMap = L.map('trip-map-container', { zoomControl: false });
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; OpenStreetMap &copy; CARTO',
-        subdomains: 'abcd',
-        maxZoom: 19
-      }).addTo(tripMap);
-    }
-
-    setTimeout(async () => {
-      tripMap.invalidateSize();
-      
-      if (tripRoutePolyline) {
-        tripRoutePolyline.remove();
-        tripRoutePolyline = null;
-      }
-      if (tripMapMarker) {
-        tripMapMarker.remove();
-        tripMapMarker = null;
-      }
-      
-      const src = CITY_COORDS[trip.source];
-      const dst = CITY_COORDS[trip.destination];
-      
-      if (src && dst) {
-        try {
-          // OSRM routing request
-          const url = `https://router.project-osrm.org/route/v1/driving/${src[1]},${src[0]};${dst[1]},${dst[0]}?overview=full&geometries=geojson`;
-          const res = await fetch(url);
-          if (res.ok) {
-            const data = await res.json();
-            if (data.routes && data.routes.length > 0) {
-              const coordinates = data.routes[0].geometry.coordinates.map(coord => [coord[1], coord[0]]); // LonLat to LatLon
-              
-              // Draw solid route polyline
-              tripRoutePolyline = L.polyline(coordinates, { 
-                color: 'var(--accent)', 
-                weight: 5, 
-                opacity: 0.9 
-              }).addTo(tripMap);
-              
-              tripMap.fitBounds(tripRoutePolyline.getBounds(), { padding: [40, 40], animate: true });
-              document.getElementById('trip-map-subtitle').innerText = 'Vehicle Location Tracking Active';
-            }
-          }
-        } catch (err) {
-          console.error("OSRM Routing failed:", err);
-        }
-      }
-
-      // If routing failed or didn't return routes, fallback to straight line
-      if (!tripRoutePolyline && src && dst) {
-        tripRoutePolyline = L.polyline([src, dst], { color: 'var(--accent)', weight: 5, opacity: 0.7, dashArray: '10, 10' }).addTo(tripMap);
-        tripMap.fitBounds(tripRoutePolyline.getBounds(), { padding: [40, 40] });
-      }
-
-      if (trip.current_lat && trip.current_lon) {
-        renderMapMarker(trip.current_lat, trip.current_lon);
-      } else if (!src || !dst) {
-        tripMap.setView([20.5937, 78.9629], 5);
-        document.getElementById('trip-map-subtitle').innerText = 'No live GPS data available for this trip yet.';
-      }
-
-      if (trip.status === 'Dispatched') {
-        pollTripLocation();
-        mapPollInterval = setInterval(pollTripLocation, 5000);
-      }
-    }, 400);
-  }
-
   function bindEvents() {
     // Filter Clicks
     document.querySelectorAll('.filter-bar button').forEach(btn => {
@@ -361,16 +192,6 @@
     });
 
     // Dispatch Actions
-    
-    document.querySelectorAll('.trip-row').forEach(row => {
-      row.addEventListener('click', (e) => {
-        // Prevent map from opening if a button was clicked
-        if (e.target.closest('button')) return;
-        const id = row.getAttribute('data-id');
-        showTripDetailsModal(id);
-      });
-    });
-
     document.querySelectorAll('.btn-dispatch').forEach(btn => {
       btn.addEventListener('click', async (e) => {
         e.stopPropagation();
@@ -425,10 +246,8 @@
             </button>
           ` : ''}
         </div>
-
       </div>
       <div id="trips-content-wrap">
-
         ${buildStatsBar()}
         ${buildFilterTabs()}
         ${buildTripsTable()}
@@ -436,21 +255,17 @@
     `;
   }
 
-
   // --- Register Page ---
-
   TransitOps.registerPage('trips', () => {
     setTimeout(() => {
       bindEvents();
 
-
-            const role = DataLayer.getCurrentRole();
+      const role = DataLayer.getCurrentRole();
       const canCreate = (role === 'Fleet Manager' || role === 'Safety Officer');
       if (canCreate) {
         const addBtn = document.getElementById('btn-add-trip');
         if (addBtn) addBtn.addEventListener('click', openAddModal);
       }
-
 
       const reportBtn = document.getElementById('btn-report-trips');
       if (reportBtn) {
@@ -466,214 +281,5 @@
 
     return renderTripsPage();
   });
-
-
-  // ── Trip Details Modal ──
-  function initTripDetailsModal() {
-    if (document.getElementById('trip-details-modal')) return;
-    
-    const modalHTML = `
-      <div id="trip-details-modal" class="modal-backdrop" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 1000; align-items: center; justify-content: center;">
-        <div class="modal-content" style="background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 12px; width: 90%; max-width: 700px; max-height: 90vh; overflow-y: auto; padding: 24px; box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
-          
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; border-bottom: 1px solid var(--border-color); padding-bottom: 16px;">
-            <div style="display: flex; align-items: center; gap: 16px;">
-              <h2 id="td-title" style="margin: 0; font-size: 20px;">Trip Details</h2>
-              <span id="td-badge" class="status-badge" style="font-size: 13px;"></span>
-            </div>
-            <button id="td-close" style="background: transparent; border: none; color: var(--text-muted); font-size: 24px; cursor: pointer;">&times;</button>
-          </div>
-          
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px;">
-            
-            <!-- Route Section -->
-            <div style="background: var(--bg-base); padding: 16px; border-radius: 8px; border: 1px solid var(--border-color); grid-column: 1 / -1;">
-              <h3 style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px; text-transform: uppercase;">Route Information</h3>
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-                <div style="font-size: 24px; font-weight: 600; color: var(--text-primary);" id="td-source"></div>
-                <div style="color: var(--accent);">→</div>
-                <div style="font-size: 24px; font-weight: 600; color: var(--text-primary);" id="td-destination"></div>
-              </div>
-              <div style="display: flex; gap: 24px; font-size: 14px; color: var(--text-secondary);">
-                <div><strong>Planned Dist:</strong> <span id="td-planned-dist"></span> km</div>
-                <div id="td-actual-dist-container" style="display: none;"><strong>Actual Odo:</strong> <span id="td-actual-dist"></span> km</div>
-              </div>
-            </div>
-
-            <!-- Assignment Section -->
-            <div style="background: var(--bg-base); padding: 16px; border-radius: 8px; border: 1px solid var(--border-color);">
-              <h3 style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px; text-transform: uppercase;">Driver Assignment</h3>
-              <div id="td-driver-info" style="font-size: 14px; color: var(--text-secondary); line-height: 1.6;"></div>
-            </div>
-
-            <div style="background: var(--bg-base); padding: 16px; border-radius: 8px; border: 1px solid var(--border-color);">
-              <h3 style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px; text-transform: uppercase;">Vehicle Assignment</h3>
-              <div id="td-vehicle-info" style="font-size: 14px; color: var(--text-secondary); line-height: 1.6;"></div>
-            </div>
-
-            <!-- Cargo & Info -->
-            <div style="background: var(--bg-base); padding: 16px; border-radius: 8px; border: 1px solid var(--border-color);">
-              <h3 style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px; text-transform: uppercase;">Cargo & Resources</h3>
-              <div id="td-cargo-info" style="font-size: 14px; color: var(--text-secondary); line-height: 1.6;"></div>
-            </div>
-
-            <!-- Costs -->
-            <div style="background: var(--bg-base); padding: 16px; border-radius: 8px; border: 1px solid var(--border-color);">
-              <h3 style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px; text-transform: uppercase;">Vehicle Total Costs</h3>
-              <div id="td-cost-info" style="font-size: 14px; color: var(--text-secondary); line-height: 1.6;"></div>
-            </div>
-          </div>
-          
-          <div id="td-actions" style="display: flex; gap: 12px; justify-content: flex-end; border-top: 1px solid var(--border-color); padding-top: 16px;">
-             <!-- Buttons dynamically injected here -->
-          </div>
-
-        </div>
-      </div>
-    `;
-    
-    document.body.insertAdjacentHTML('beforeend', modalHTML);
-    
-    document.getElementById('td-close').addEventListener('click', () => {
-      document.getElementById('trip-details-modal').style.display = 'none';
-    });
-    
-    // Close on backdrop click
-    document.getElementById('trip-details-modal').addEventListener('click', (e) => {
-      if (e.target === e.currentTarget) {
-        e.target.style.display = 'none';
-      }
-    });
-  }
-
-  function showTripDetailsModal(tripId) {
-    initTripDetailsModal();
-    const trip = DataLayer.getTrips().find(t => t.id === Number(tripId));
-    if (!trip) return;
-
-    // Header
-    document.getElementById('td-title').innerText = `Trip #${String(trip.id).padStart(3, '0')}`;
-    const badge = document.getElementById('td-badge');
-    badge.innerText = trip.status;
-    badge.className = 'status-badge';
-    if (trip.status === 'Draft') badge.classList.add('status-draft');
-    else if (trip.status === 'Dispatched') badge.classList.add('status-dispatched');
-    else if (trip.status === 'Completed') badge.classList.add('status-completed');
-    else if (trip.status === 'Cancelled') badge.classList.add('status-cancelled');
-
-    // Route
-    document.getElementById('td-source').innerText = trip.source;
-    document.getElementById('td-destination').innerText = trip.destination;
-    document.getElementById('td-planned-dist').innerText = trip.plannedDistanceKm;
-    
-    const odoContainer = document.getElementById('td-actual-dist-container');
-    if (trip.status === 'Completed' && trip.actualOdometer) {
-      document.getElementById('td-actual-dist').innerText = trip.actualOdometer;
-      odoContainer.style.display = 'block';
-    } else {
-      odoContainer.style.display = 'none';
-    }
-
-    // Driver & Vehicle
-    const driver = trip.driverId ? DataLayer.getDrivers().find(d => d.id === trip.driverId) : null;
-    const vehicle = trip.vehicleId ? DataLayer.getVehicles().find(v => v.id === trip.vehicleId) : null;
-
-    document.getElementById('td-driver-info').innerHTML = driver ? `
-      <strong>Name:</strong> ${driver.name}<br>
-      <strong>License:</strong> ${driver.licenseNumber} (${driver.licenseCategory})<br>
-      <strong>Contact:</strong> ${driver.contactNumber || 'N/A'}<br>
-      <strong>Safety Score:</strong> ${driver.safetyScore}
-    ` : 'Unassigned';
-
-    document.getElementById('td-vehicle-info').innerHTML = vehicle ? `
-      <strong>Reg Number:</strong> ${vehicle.regNumber}<br>
-      <strong>Type:</strong> ${vehicle.type}<br>
-      <strong>Capacity:</strong> ${vehicle.maxLoadKg} kg
-    ` : 'Unassigned';
-
-    // Cargo & Info
-    document.getElementById('td-cargo-info').innerHTML = `
-      <strong>Weight:</strong> ${trip.cargoWeightKg} kg<br>
-      ${trip.status === 'Completed' && trip.fuelConsumed ? `<strong>Fuel Consumed:</strong> ${trip.fuelConsumed} L` : ''}
-    `;
-
-    // Costs
-    if (vehicle) {
-      const fuelCost = typeof DataLayer.getTotalFuelCost === 'function' ? DataLayer.getTotalFuelCost(vehicle.id) : 0;
-      const maintCost = typeof DataLayer.getTotalMaintenanceCost === 'function' ? DataLayer.getTotalMaintenanceCost(vehicle.id) : 0;
-      const opCost = typeof DataLayer.getOperationalCost === 'function' ? DataLayer.getOperationalCost(vehicle.id) : (fuelCost + maintCost);
-      
-      document.getElementById('td-cost-info').innerHTML = `
-        <strong>Fuel Cost:</strong> $${fuelCost.toFixed(2)}<br>
-        <strong>Maintenance Cost:</strong> $${maintCost.toFixed(2)}<br>
-        <strong>Total Operational Cost:</strong> <span style="color:var(--accent);font-weight:600;">$${opCost.toFixed(2)}</span>
-      `;
-    } else {
-      document.getElementById('td-cost-info').innerHTML = 'N/A (No vehicle assigned)';
-    }
-
-    // Actions
-    const actionsContainer = document.getElementById('td-actions');
-    actionsContainer.innerHTML = ''; // Clear old buttons
-
-    if (trip.status === 'Draft') {
-      const btn = document.createElement('button');
-      btn.className = 'btn btn--accent';
-      btn.innerText = 'Dispatch';
-      btn.onclick = async () => {
-        btn.disabled = true;
-        try {
-          await DataLayer.dispatchTrip(trip.id);
-          document.getElementById('trip-details-modal').style.display = 'none';
-          renderTripsPage();
-        } catch (err) {
-          alert(err.message);
-          btn.disabled = false;
-        }
-      };
-      actionsContainer.appendChild(btn);
-    } else if (trip.status === 'Dispatched') {
-      const btnComplete = document.createElement('button');
-      btnComplete.className = 'btn btn--success';
-      btnComplete.innerText = 'Complete';
-      btnComplete.onclick = () => {
-        const odo = prompt("Enter actual odometer reading (km):");
-        if (!odo) return;
-        const fuel = prompt("Enter fuel consumed (L):");
-        if (!fuel) return;
-        
-        btnComplete.disabled = true;
-        DataLayer.completeTrip(trip.id, parseFloat(odo), parseFloat(fuel)).then(() => {
-          document.getElementById('trip-details-modal').style.display = 'none';
-          renderTripsPage();
-        }).catch(err => {
-          alert(err.message);
-          btnComplete.disabled = false;
-        });
-      };
-      actionsContainer.appendChild(btnComplete);
-
-      const btnCancel = document.createElement('button');
-      btnCancel.className = 'btn btn--outline';
-      btnCancel.style.borderColor = 'var(--status-cancelled)';
-      btnCancel.style.color = 'var(--status-cancelled)';
-      btnCancel.innerText = 'Cancel';
-      btnCancel.onclick = async () => {
-        if (!confirm('Are you sure you want to cancel this trip?')) return;
-        btnCancel.disabled = true;
-        try {
-          await DataLayer.cancelTrip(trip.id);
-          document.getElementById('trip-details-modal').style.display = 'none';
-          renderTripsPage();
-        } catch (err) {
-          alert(err.message);
-          btnCancel.disabled = false;
-        }
-      };
-      actionsContainer.appendChild(btnCancel);
-    }
-
-    document.getElementById('trip-details-modal').style.display = 'flex';
-  }
 
 })();

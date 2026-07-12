@@ -24,7 +24,7 @@
     // Default center on India
     mapInstance = L.map(containerId).setView([20.5937, 78.9629], 5);
 
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
       attribution: '© OpenStreetMap contributors'
     }).addTo(mapInstance);
@@ -168,10 +168,11 @@
       // Live Driver Location Polling for Dispatched trips
       if (tripStatus === 'Dispatched' && coordinates.length > 0) {
         driverMarker = L.marker(coordinates[0], {
-          icon: L.icon({
-            iconUrl: 'truck.png',
-            iconSize: [48, 48],
-            iconAnchor: [24, 24]
+          icon: L.divIcon({
+            className: 'map-pin map-pin--driver',
+            html: '<div style="font-size: 24px; text-shadow: 0 0 6px rgba(0,0,0,0.6); text-align:center;">🚚</div>',
+            iconSize: [24, 24],
+            iconAnchor: [12, 12]
           })
         }).addTo(mapInstance);
 
